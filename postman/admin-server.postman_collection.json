@@ -1,0 +1,253 @@
+{
+  "info": {
+    "name": "Admin Server",
+    "description": "Postman collection for the Admin Server endpoints. Manages agents and their policy files.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "a1f1c5d0-1d4f-4a4e-9b1d-admin-server-0001"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "creator_did",
+      "value": "did:example:creator",
+      "type": "string"
+    },
+    {
+      "key": "org_id",
+      "value": "org-1",
+      "type": "string"
+    },
+    {
+      "key": "agent_name",
+      "value": "agent-a",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Agent",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/create-agent",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "create-agent"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "policy",
+              "type": "file",
+              "src": [],
+              "description": "Policy file to upload (any file type)."
+            },
+            {
+              "key": "creator_did",
+              "type": "text",
+              "value": "{{creator_did}}",
+              "description": "DID of the user creating the agent."
+            },
+            {
+              "key": "org_id",
+              "type": "text",
+              "value": "{{org_id}}",
+              "description": "Organization ID the agent belongs to."
+            },
+            {
+              "key": "agent_name",
+              "type": "text",
+              "value": "{{agent_name}}",
+              "description": "Name of the agent to create."
+            }
+          ]
+        },
+        "description": "Creates a new agent, stores its policy file under a UUID-suffixed filename, and registers the agent with AgentDNA. Fails if an agent with the same `org_id` and `agent_name` already exists, or if AgentDNA registration fails (in which case the on-disk artifacts are rolled back)."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "create-agent"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Agent 'agent-a' created successfully\"\n}"
+        },
+        {
+          "name": "Agent Already Exists",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "create-agent"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Agent 'agent-a' already exists for org 'org-1'\"\n}"
+        },
+        {
+          "name": "Missing Field",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "create-agent"]
+            }
+          },
+          "status": "Unprocessable Entity",
+          "code": 422,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"creator_did\"],\n      \"msg\": \"Field required\",\n      \"input\": null\n    }\n  ]\n}"
+        },
+        {
+          "name": "AgentDNA Registration Failed",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "create-agent"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to register agent with AgentDNA: <error details>\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Update Agent Policies",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/update-agent-policies",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "update-agent-policies"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "policy",
+              "type": "file",
+              "src": [],
+              "description": "Replacement policy file."
+            },
+            {
+              "key": "creator_did",
+              "type": "text",
+              "value": "{{creator_did}}",
+              "description": "DID of the user updating the agent."
+            },
+            {
+              "key": "org_id",
+              "type": "text",
+              "value": "{{org_id}}",
+              "description": "Organization ID the agent belongs to."
+            },
+            {
+              "key": "agent_name",
+              "type": "text",
+              "value": "{{agent_name}}",
+              "description": "Name of the agent whose policy is being updated."
+            }
+          ]
+        },
+        "description": "Stores a new policy file (UUID-suffixed) for an existing agent and pushes the update to AgentDNA via `update_policy()`. Fails if no agent with the given `org_id` and `agent_name` exists, or if the AgentDNA update call fails."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/update-agent-policies",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "update-agent-policies"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Policy for agent 'agent-a' updated successfully\"\n}"
+        },
+        {
+          "name": "Agent Not Found",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/update-agent-policies",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "update-agent-policies"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Agent 'agent-a' not found for org 'org-1'\"\n}"
+        },
+        {
+          "name": "AgentDNA Update Failed",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/update-agent-policies",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "update-agent-policies"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to update policy with AgentDNA: <error details>\"\n}"
+        }
+      ]
+    }
+  ]
+}
