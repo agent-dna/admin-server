@@ -63,6 +63,21 @@ Response (JSON):
 - `status` (bool): true if the agent was created
 - `message` (string): human readable result
 
+### POST `/agent-admin/v1/register-admin`
+
+Registers an admin user by initializing a Rubix signer for them and returning the resulting DID.
+
+Request type: `application/json`
+
+Request body:
+
+- `username` (string): username of the admin to register
+
+Response (JSON):
+
+- `status` (bool): true if the signer was initialized successfully
+- `message` (string): on success, the admin's DID (IPFS CID v1); on failure, a human-readable error
+
 ### POST `/agent-admin/v1/update-agent-policies`
 
 Replaces the policy file for an existing agent.

@@ -4,6 +4,8 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 from agentdna import AgentDNA
+from rubix.signer import Signer
+from rubix.client import RubixClient
 
 from config import settings
 
@@ -61,6 +63,19 @@ async def create_agent(
         return False, f"Failed to register agent with AgentDNA: {exc}"
 
     return True, f"Agent '{agent_name}' created successfully"
+
+
+async def register_admin(username: str) -> tuple[bool, str]:
+    client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
+    
+    try:
+        signer = Signer(
+            rubixClient=client,
+            alias=username,
+        )
+        return True, signer.did
+    except Exception as exc:
+        return False, f"Failed to initialize signer: {exc}"
 
 
 async def update_agent_policies(

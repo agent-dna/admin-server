@@ -25,6 +25,11 @@
       "key": "agent_name",
       "value": "agent-a",
       "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "admin-user",
+      "type": "string"
     }
   ],
   "item": [
@@ -145,6 +150,105 @@
             { "key": "Content-Type", "value": "application/json" }
           ],
           "body": "{\n  \"status\": false,\n  \"message\": \"Failed to register agent with AgentDNA: <error details>\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "Register Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/register-admin",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "register-admin"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\"\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Registers an admin user by initializing a Rubix signer. On success, `message` contains the admin's DID (IPFS CID v1)."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/register-admin",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "register-admin"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin-user\"\n}"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": true,\n  \"message\": \"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\"\n}"
+        },
+        {
+          "name": "Signer Init Failed",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/register-admin",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "register-admin"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin-user\"\n}"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to initialize signer: <error details>\"\n}"
+        },
+        {
+          "name": "Missing Field",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/register-admin",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "register-admin"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "status": "Unprocessable Entity",
+          "code": 422,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"username\"],\n      \"msg\": \"Field required\",\n      \"input\": {}\n    }\n  ]\n}"
         }
       ]
     },

@@ -1,8 +1,8 @@
 from fastapi import FastAPI, File, Form, UploadFile
 
 from config import settings
-from schemas import AgentResponse
-from services import create_agent, update_agent_policies
+from schemas import AgentResponse, RegisterAdminRequest
+from services import create_agent, register_admin, update_agent_policies
 
 app = FastAPI(title="Admin Server", version="0.1.0")
 
@@ -15,6 +15,12 @@ async def create_agent_endpoint(
     agent_name: str = Form(...),
 ) -> AgentResponse:
     status, message = await create_agent(policy, creator_did, org_id, agent_name)
+    return AgentResponse(status=status, message=message)
+
+
+@app.post("/agent-admin/v1/register-admin", response_model=AgentResponse)
+async def register_admin_endpoint(payload: RegisterAdminRequest) -> AgentResponse:
+    status, message = await register_admin(payload.username)
     return AgentResponse(status=status, message=message)
 
 
