@@ -38,14 +38,11 @@ async def create_agent(
     agent_name: str,
 ) -> tuple[bool, str]:
     agent_dir = _agent_dir(org_id, agent_name)
-    if agent_dir.exists():
-        return False, f"Agent '{agent_name}' already exists for org '{org_id}'"
-
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
     await _write_policy(policy, policy_path)
 
     try:
-        AgentDNA(
+        agentdna = AgentDNA(
             chain_url=settings.agentdna_chain_url,
             alias=agent_name,
             api_key=settings.agentdna_api_key,
@@ -55,14 +52,15 @@ async def create_agent(
                 "deployer": creator_did,
                 "agent_name": agent_name,
             },
-            policy_file = policy_path,
+            policy_file=policy_path,
             cbac=True
         )
+
+        agent_did = agentdna.did
+        return True, f"{agent_did}"
     except Exception as exc:
         shutil.rmtree(agent_dir, ignore_errors=True)
         return False, f"Failed to register agent with AgentDNA: {exc}"
-
-    return True, f"Agent '{agent_name}' created successfully"
 
 
 async def register_admin(username: str) -> tuple[bool, str]:
@@ -85,9 +83,6 @@ async def update_agent_policies(
     agent_name: str,
 ) -> tuple[bool, str]:
     agent_dir = _agent_dir(org_id, agent_name)
-    if not agent_dir.exists():
-        return False, f"Agent '{agent_name}' not found for org '{org_id}'"
-
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
     await _write_policy(policy, policy_path)
 
