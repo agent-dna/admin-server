@@ -30,6 +30,11 @@
       "key": "username",
       "value": "admin-user",
       "type": "string"
+    },
+    {
+      "key": "agent_id",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -92,7 +97,7 @@
           "header": [
             { "key": "Content-Type", "value": "application/json" }
           ],
-          "body": "{\n  \"status\": true,\n  \"message\": \"Agent 'agent-a' created successfully\"\n}"
+          "body": "{\n  \"status\": true,\n  \"message\": \"Agent 'agent-a' created successfully\",\n  \"agent_id\": \"<nft-id>\",\n  \"agent_did\": \"<agent-did>\"\n}"
         },
         {
           "name": "Agent Already Exists",
@@ -111,7 +116,7 @@
           "header": [
             { "key": "Content-Type", "value": "application/json" }
           ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Agent 'agent-a' already exists for org 'org-1'\"\n}"
+          "body": "{\n  \"status\": false,\n  \"message\": \"Agent 'agent-a' already exists for org 'org-1'\",\n  \"agent_id\": null,\n  \"agent_did\": null\n}"
         },
         {
           "name": "Missing Field",
@@ -149,7 +154,7 @@
           "header": [
             { "key": "Content-Type", "value": "application/json" }
           ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to register agent with AgentDNA: <error details>\"\n}"
+          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to register agent with AgentDNA: <error details>\",\n  \"agent_id\": null,\n  \"agent_did\": null\n}"
         }
       ]
     },
@@ -288,10 +293,16 @@
               "type": "text",
               "value": "{{agent_name}}",
               "description": "Name of the agent whose policy is being updated."
+            },
+            {
+              "key": "agent_id",
+              "type": "text",
+              "value": "{{agent_id}}",
+              "description": "On-chain NFT id of the agent (returned by /create-agent)."
             }
           ]
         },
-        "description": "Stores a new policy file (UUID-suffixed) for an existing agent and pushes the update to AgentDNA via `update_policy()`. Fails if no agent with the given `org_id` and `agent_name` exists, or if the AgentDNA update call fails."
+        "description": "Stores a new policy file (UUID-suffixed) for an existing agent and pushes the update to AgentDNA via `update_agent_policy(agent_id, ...)`. Fails if the caller's `creator_did` isn't a registered admin or if the AgentDNA update call fails."
       },
       "response": [
         {

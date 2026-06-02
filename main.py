@@ -1,21 +1,25 @@
 from fastapi import FastAPI, File, Form, UploadFile
 
 from config import settings
-from schemas import AgentResponse, RegisterAdminRequest
+from schemas import AgentResponse, CreateAgentResponse, RegisterAdminRequest
 from services import create_agent, register_admin, update_agent_policies
 
 app = FastAPI(title="Admin Server", version="0.1.0")
 
 
-@app.post("/agent-admin/v1/create-agent", response_model=AgentResponse)
+@app.post("/agent-admin/v1/create-agent", response_model=CreateAgentResponse)
 async def create_agent_endpoint(
     policy: UploadFile = File(...),
     creator_did: str = Form(...),
     org_id: str = Form(...),
     agent_name: str = Form(...),
-) -> AgentResponse:
-    status, message = await create_agent(policy, creator_did, org_id, agent_name)
-    return AgentResponse(status=status, message=message)
+) -> CreateAgentResponse:
+    status, message, agent_id, agent_did = await create_agent(
+        policy, creator_did, org_id, agent_name
+    )
+    return CreateAgentResponse(
+        status=status, message=message, agent_id=agent_id, agent_did=agent_did
+    )
 
 
 @app.post("/agent-admin/v1/register-admin", response_model=AgentResponse)
@@ -30,9 +34,10 @@ async def update_agent_policies_endpoint(
     creator_did: str = Form(...),
     org_id: str = Form(...),
     agent_name: str = Form(...),
+    agent_id: str = Form(...),
 ) -> AgentResponse:
     status, message = await update_agent_policies(
-        policy, creator_did, org_id, agent_name
+        policy, creator_did, org_id, agent_name, agent_id
     )
     return AgentResponse(status=status, message=message)
 

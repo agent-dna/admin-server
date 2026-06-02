@@ -47,14 +47,14 @@ You can also browse the auto generated API docs at `http://localhost:<ADMIN_SERV
 
 ### POST `/agent-admin/v1/create-agent`
 
-Creates a new agent and stores its policy file.
+Creates a new agent, stores its policy file (UUID-suffixed), and deploys the agent NFT via AgentDNA. The caller's DID (`creator_did`) must already be registered locally via `/register-admin`.
 
 Request type: `multipart/form-data`
 
 Request fields:
 
 - `policy` (file): the policy file to upload
-- `creator_did` (string): DID of the user creating the agent
+- `creator_did` (string): DID of the admin creating the agent
 - `org_id` (string): organization ID the agent belongs to
 - `agent_name` (string): name of the agent
 
@@ -62,6 +62,30 @@ Response (JSON):
 
 - `status` (bool): true if the agent was created
 - `message` (string): human readable result
+- `agent_id` (string \| null): on-chain NFT id for the deployed agent (null on failure)
+- `agent_did` (string \| null): DID of the deployed agent (null on failure)
+
+Sample success:
+
+```json
+{
+  "status": true,
+  "message": "Agent 'agent-a' created successfully",
+  "agent_id": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtnft00001",
+  "agent_did": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtdid00001"
+}
+```
+
+Sample failure (admin not registered):
+
+```json
+{
+  "status": false,
+  "message": "Admin 'bafybeic...' is not registered locally. Try requesting registration of admin again.",
+  "agent_id": null,
+  "agent_did": null
+}
+```
 
 ### POST `/agent-admin/v1/register-admin`
 
@@ -78,6 +102,24 @@ Response (JSON):
 - `status` (bool): true if the signer was initialized successfully
 - `message` (string): on success, the admin's DID (IPFS CID v1); on failure, a human-readable error
 
+Sample success:
+
+```json
+{
+  "status": true,
+  "message": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+}
+```
+
+Sample failure (conflict with existing record):
+
+```json
+{
+  "status": false,
+  "message": "Admin registration conflict: username 'admin-user' already registered with a different did"
+}
+```
+
 ### POST `/agent-admin/v1/update-agent-policies`
 
 Replaces the policy file for an existing agent.
@@ -87,14 +129,33 @@ Request type: `multipart/form-data`
 Request fields:
 
 - `policy` (file): the new policy file
-- `creator_did` (string): DID of the user updating the agent
+- `creator_did` (string): DID of the admin updating the agent (must be registered via `/register-admin`)
 - `org_id` (string): organization ID the agent belongs to
 - `agent_name` (string): name of the agent
+- `agent_id` (string): on-chain NFT id of the agent (returned by `/create-agent`)
 
 Response (JSON):
 
 - `status` (bool): true if the policy was updated
 - `message` (string): human readable result
+
+Sample success:
+
+```json
+{
+  "status": true,
+  "message": "Policy for agent 'agent-a' updated successfully"
+}
+```
+
+Sample failure (admin not registered):
+
+```json
+{
+  "status": false,
+  "message": "Admin 'bafybeic...' is not registered locally. Try requesting registration of admin again."
+}
+```
 
 ## Project structure
 
