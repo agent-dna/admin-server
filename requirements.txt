@@ -4,5 +4,5 @@ python-multipart==0.0.12
 pydantic==2.9.2
 python-dotenv==1.0.1
 rubix-py==1.1.1
-agent-dna @ git+https://github.com/rubixchain/agentdna.git@arnab/coca-refactor
+agent-dna @ git+https://github.com/rubixchain/agentdna.git@intent-nft
 

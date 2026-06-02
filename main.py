@@ -17,9 +17,10 @@ async def create_agent_endpoint(
     status, message, agent_id, agent_did = await create_agent(
         policy, creator_did, org_id, agent_name
     )
-    return CreateAgentResponse(
+    response = CreateAgentResponse(
         status=status, message=message, agent_id=agent_id, agent_did=agent_did
     )
+    return response
 
 
 @app.post("/agent-admin/v1/register-admin", response_model=AgentResponse)

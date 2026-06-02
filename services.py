@@ -68,6 +68,12 @@ async def create_agent(
             alias=agent_name,
             api_key=settings.agentdna_api_key,
             kind="agent",
+            policy_file=policy_path,
+            metadata={
+                "orgId": org_id,
+                "deployer": creator_did,
+                "agent_name": agent_name,
+            },
             cbac=True,
         )
 
@@ -75,11 +81,6 @@ async def create_agent(
 
         agent_id = admin.deploy_agent_nft(
             agent,
-            metadata={
-                "orgId": org_id,
-                "deployer": creator_did,
-                "agent_name": agent_name,
-            },
             policy_content=policy_content,
         )
         agent_did = agent.did
