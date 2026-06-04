@@ -258,6 +258,80 @@
       ]
     },
     {
+      "name": "Authorize Action",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/authorize-action",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "authorize-action"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agent_id\": \"{{agent_id}}\",\n  \"action_intent\": \"send-slack-message\"\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Authorization decision endpoint for the CBAC middleware. The middleware sits between an agent and the target App; before calling the App it asks this endpoint whether the agent's `action_intent` is allowed for the given `agent_id`. The admin server returns allow/deny based on the agent's deployed policy and never talks to the App itself — the middleware is what forwards or blocks the original call."
+      },
+      "response": [
+        {
+          "name": "Authorized",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/authorize-action",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "authorize-action"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_id\": \"<nft-id>\",\n  \"action_intent\": \"send-slack-message\"\n}"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"authorized\": true,\n  \"message\": \"Action 'send-slack-message' authorized for agent '<nft-id>'\"\n}"
+        },
+        {
+          "name": "Denied",
+          "originalRequest": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/authorize-action",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "authorize-action"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agent_id\": \"<nft-id>\",\n  \"action_intent\": \"delete-channel\"\n}"
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [
+            { "key": "Content-Type", "value": "application/json" }
+          ],
+          "body": "{\n  \"authorized\": false,\n  \"message\": \"Action 'delete-channel' not permitted by agent's policy\"\n}"
+        }
+      ]
+    },
+    {
       "name": "Update Agent Policies",
       "request": {
         "method": "POST",

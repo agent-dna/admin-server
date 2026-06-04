@@ -120,6 +120,50 @@ Sample failure (conflict with existing record):
 }
 ```
 
+### POST `/agent-admin/v1/authorize-action`
+
+Authorization decision endpoint called by the CBAC middleware that sits between agents and external apps (Slack, GitHub, etc.). The flow:
+
+```text
+Agent --> Middleware --> App
+              |
+              v
+         Admin Server
+       (authorize-action)
+```
+
+The middleware is the one that ultimately calls the App. Before it does, it asks this endpoint whether the agent's intent should be allowed; based on the response, the middleware either forwards the original call to the App or blocks it. The admin server itself never talks to the App and has no knowledge of it — its only job is to return an allow/deny decision based on the agent's deployed policy.
+
+Request type: `application/json`
+
+Request body:
+
+- `agent_id` (string): on-chain NFT id of the calling agent
+- `action_intent` (string): the action the agent intends to perform
+
+Response (JSON):
+
+- `authorized` (bool): true if the action is allowed
+- `message` (string): human-readable rationale
+
+Sample authorized:
+
+```json
+{
+  "authorized": true,
+  "message": "Action 'send-slack-message' authorized for agent '<nft-id>'"
+}
+```
+
+Sample denied:
+
+```json
+{
+  "authorized": false,
+  "message": "Action 'delete-channel' not permitted by agent's policy"
+}
+```
+
 ### POST `/agent-admin/v1/update-agent-policies`
 
 Replaces the policy file for an existing agent.

@@ -1,3 +1,4 @@
+import random
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -6,6 +7,8 @@ from fastapi import UploadFile
 from agentdna import AgentDNA
 from rubix.signer import Signer
 from rubix.client import RubixClient
+from agentdna.cbac import CBAC
+from agentdna.trust import RubixTrustService
 
 from admin_store import AdminConflictError, add_admin
 from config import settings
@@ -78,12 +81,17 @@ async def create_agent(
         )
 
         policy_content = policy_path.read_text(encoding="utf-8")
-
-        agent_id = admin.deploy_agent_nft(
-            agent,
-            policy_content=policy_content,
-        )
-        agent_did = agent.did
+        print("We are inside!")
+        
+        try:
+            agent_id = admin.deploy_agent_nft(
+                agent,
+                policy_content=policy_content,
+            )
+            agent_did = agent.did
+        except Exception as exc:
+            shutil.rmtree(agent_dir, ignore_errors=True)
+            return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
 
         return True, f"Agent '{agent_name}' created successfully", agent_id, agent_did
     except Exception as exc:
@@ -109,6 +117,22 @@ async def register_admin(username: str) -> tuple[bool, str]:
 
     return True, signer.did
 
+
+async def authorize_action(agent_id: str, action_intent: str) -> tuple[bool, str]:
+    provenance_layer = RubixTrustService(
+        alias="admin-server",
+        chain_url=settings.agentdna_chain_url,
+        api_key=settings.agentdna_api_key,
+    )
+    cbac = CBAC(provenance_layer)
+    try:
+        result = await cbac.verify_async(agent_id, action_intent)
+    except Exception as exc:
+        return False, f"Error occurred while verifying action: {exc}"
+
+    if result.decision == "allow":
+        return True, result.reason or f"Action '{action_intent}' authorized for agent '{agent_id}'"
+    return False, result.reason or f"Action '{action_intent}' is not authorized for agent '{agent_id}'"
 
 async def update_agent_policies(
     policy: UploadFile,
