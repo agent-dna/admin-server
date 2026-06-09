@@ -118,7 +118,7 @@ async def register_admin(username: str) -> tuple[bool, str]:
     return True, signer.did
 
 
-async def authorize_action(agent_id: str, action_intent: str) -> tuple[bool, str]:
+async def authorize_action(agent_id: str, action_intent: str, agent_envelope: dict) -> tuple[bool, str]:
     provenance_layer = RubixTrustService(
         alias="admin-server",
         chain_url=settings.agentdna_chain_url,
@@ -130,7 +130,38 @@ async def authorize_action(agent_id: str, action_intent: str) -> tuple[bool, str
     except Exception as exc:
         return False, f"Error occurred while verifying action: {exc}"
 
-    if result.decision == "allow":
+    cbac_decision = result.decision
+    if cbac_decision not in ["allow", "deny"]:
+        return False, f"Unexpected CBAC decision: {cbac_decision}"
+
+    # CoCA verification — walk the signed delegation chain (host -> ... -> root)
+    # and re-verify each layer's signature, proving *who* acted at every hop.
+    # We recompute the signatures rather than trusting the embedded
+    # `verification.signature_valid` flag carried in the envelope.
+    host_block = agent_envelope.get("host", agent_envelope)
+    chain = AgentDNA._walk_chain(host_block)
+    if not chain:
+        return False, "CoCA verification failed: no signed blocks found in envelope"
+
+    for block in chain:
+        signer_did = block.get("agent")
+        envelope = block.get("envelope")
+        signature = block.get("signature")
+        layer = block.get("name") or signer_did or "<unknown>"
+
+        if not (signer_did and signature and isinstance(envelope, dict)):
+            return False, f"CoCA verification failed: layer '{layer}' is missing agent/envelope/signature"
+
+        try:
+            signature_valid = provenance_layer.verify_envelope(signer_did, envelope, signature)
+        except Exception as exc:
+            return False, f"CoCA verification failed: error verifying layer '{layer}': {exc}"
+
+        if not signature_valid:
+            return False, f"CoCA verification failed: invalid signature for layer '{layer}' ({signer_did})"
+
+
+    if cbac_decision == "allow":
         return True, result.reason or f"Action '{action_intent}' authorized for agent '{agent_id}'"
     return False, result.reason or f"Action '{action_intent}' is not authorized for agent '{agent_id}'"
 
