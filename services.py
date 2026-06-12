@@ -1,4 +1,3 @@
-import random
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -10,7 +9,15 @@ from rubix.client import RubixClient
 from agentdna.cbac import CBAC
 from agentdna.trust import RubixTrustService
 
-from admin_store import AdminConflictError, add_admin
+from db import (
+    AdminConflictError,
+    add_admin,
+    add_registered_agent,
+    get_username_by_did,
+    get_all_agents,
+    get_agent_by_did,
+    set_agent_policy,
+)
 from config import settings
 
 POLICY_STORE = Path(__file__).parent / "policy_store"
@@ -46,8 +53,6 @@ async def create_agent(
     await _write_policy(policy, policy_path)
 
     try:
-        from admin_store import get_username_by_did
-
         admin_username = get_username_by_did(creator_did)
         if not admin_username:
             shutil.rmtree(agent_dir, ignore_errors=True)
@@ -81,7 +86,6 @@ async def create_agent(
         )
 
         policy_content = policy_path.read_text(encoding="utf-8")
-        print("We are inside!")
         
         try:
             agent_id = admin.deploy_agent_nft(
@@ -93,13 +97,32 @@ async def create_agent(
             shutil.rmtree(agent_dir, ignore_errors=True)
             return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
 
+        # Agent is now deployed on-chain. Persist it to Postgres. We do NOT remove
+        # the agent dir on failure here — the on-chain deploy already succeeded, so
+        # we keep the local policy and surface the persistence error to the caller.
+        try:
+            add_registered_agent(
+                did=agent_did,
+                agent_name=agent_name,
+                org_id=org_id,
+                deployer_did=creator_did,
+                policy=policy_content,
+            )
+        except Exception as exc:
+            return (
+                False,
+                f"Agent deployed (agent_id={agent_id}) but failed to persist to database: {exc}",
+                agent_id,
+                agent_did,
+            )
+
         return True, f"Agent '{agent_name}' created successfully", agent_id, agent_did
     except Exception as exc:
         shutil.rmtree(agent_dir, ignore_errors=True)
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
 
 
-async def register_admin(username: str) -> tuple[bool, str]:
+async def register_admin(username: str, org: str) -> tuple[bool, str]:
     client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
 
     try:
@@ -111,14 +134,14 @@ async def register_admin(username: str) -> tuple[bool, str]:
         return False, f"Failed to initialize signer: {exc}"
 
     try:
-        add_admin(username, signer.did)
+        add_admin(signer.did, username, org)
     except AdminConflictError as exc:
         return False, f"Admin registration conflict: {exc}"
 
     return True, signer.did
 
 
-async def authorize_action(agent_id: str, action_intent: str) -> tuple[bool, str]:
+async def authorize_action(agent_id: str, action_intent: str, agent_envelope: dict) -> tuple[bool, str]:
     provenance_layer = RubixTrustService(
         alias="admin-server",
         chain_url=settings.agentdna_chain_url,
@@ -130,7 +153,38 @@ async def authorize_action(agent_id: str, action_intent: str) -> tuple[bool, str
     except Exception as exc:
         return False, f"Error occurred while verifying action: {exc}"
 
-    if result.decision == "allow":
+    cbac_decision = result.decision
+    if cbac_decision not in ["allow", "deny"]:
+        return False, f"Unexpected CBAC decision: {cbac_decision}"
+
+    # CoCA verification — walk the signed delegation chain (host -> ... -> root)
+    # and re-verify each layer's signature, proving *who* acted at every hop.
+    # We recompute the signatures rather than trusting the embedded
+    # `verification.signature_valid` flag carried in the envelope.
+    host_block = agent_envelope.get("host", agent_envelope)
+    chain = AgentDNA._walk_chain(host_block)
+    if not chain:
+        return False, "CoCA verification failed: no signed blocks found in envelope"
+
+    for block in chain:
+        signer_did = block.get("agent")
+        envelope = block.get("envelope")
+        signature = block.get("signature")
+        layer = block.get("name") or signer_did or "<unknown>"
+
+        if not (signer_did and signature and isinstance(envelope, dict)):
+            return False, f"CoCA verification failed: layer '{layer}' is missing agent/envelope/signature"
+
+        try:
+            signature_valid = provenance_layer.verify_envelope(signer_did, envelope, signature)
+        except Exception as exc:
+            return False, f"CoCA verification failed: error verifying layer '{layer}': {exc}"
+
+        if not signature_valid:
+            return False, f"CoCA verification failed: invalid signature for layer '{layer}' ({signer_did})"
+
+
+    if cbac_decision == "allow":
         return True, result.reason or f"Action '{action_intent}' authorized for agent '{agent_id}'"
     return False, result.reason or f"Action '{action_intent}' is not authorized for agent '{agent_id}'"
 
@@ -146,8 +200,6 @@ async def update_agent_policies(
     await _write_policy(policy, policy_path)
 
     try:
-        # Change the following from agent to admin
-        from admin_store import get_username_by_did
         admin_username = get_username_by_did(creator_did)
         if not admin_username:
             return (
@@ -168,4 +220,35 @@ async def update_agent_policies(
     except Exception as exc:
         return False, f"Failed to update policy with AgentDNA: {exc}"
 
+    # Policy updated on-chain; mirror it into Postgres. The agents table is keyed
+    # by did (which we don't have here), so match on (org_id, agent_name) — the
+    # same identity the policy_store layout uses.
+    try:
+        updated = set_agent_policy(org_id, agent_name, policy_content)
+    except Exception as exc:
+        return False, f"Policy updated on-chain but failed to persist to database: {exc}"
+
+    if not updated:
+        return (
+            True,
+            f"Policy for agent '{agent_name}' updated on-chain, but no matching DB record was found to update",
+        )
+
     return True, f"Policy for agent '{agent_name}' updated successfully"
+
+async def list_agents() -> tuple[bool, str, list[dict[str, str]]]:
+    try:
+        agents = get_all_agents()
+    except Exception as exc:
+        return False, f"Failed to fetch agents: {exc}", []
+    return True, f"Retrieved {len(agents)} agent(s)", agents
+
+
+async def get_agent(did: str) -> tuple[bool, str, dict[str, str] | None]:
+    try:
+        agent = get_agent_by_did(did)
+    except Exception as exc:
+        return False, f"Failed to fetch agent: {exc}", None
+    if agent is None:
+        return False, f"No agent found with did '{did}'", None
+    return True, "Agent retrieved", agent

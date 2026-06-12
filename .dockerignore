@@ -1,0 +1,30 @@
+# Virtual environment (huge; deps are reinstalled in the image)
+venv/
+.venv/
+env/
+ENV/
+
+# Local secrets — env is provided via docker-compose, not baked into the image
+.env
+
+# Local runtime state that must not leak into the image
+policy_store/
+s.json
+
+# Version control / IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Python caches
+__pycache__/
+*.py[codz]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Docs / misc
+README.md
+postman/
