@@ -1,6 +1,9 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, File, Form, UploadFile
 
 from config import settings
+from db import init_db, pool
 from schemas import (
     AgentResponse,
     AuthorizeActionRequest,
@@ -13,9 +16,19 @@ from services import (
     create_agent,
     register_admin,
     update_agent_policies,
+    list_agents,
+    get_agent,
 )
 
-app = FastAPI(title="Admin Server", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+    pool.close()
+
+
+app = FastAPI(title="Admin Server", version="0.1.0", lifespan=lifespan)
 
 
 @app.post("/agent-admin/v1/create-agent", response_model=CreateAgentResponse)
@@ -34,17 +47,27 @@ async def create_agent_endpoint(
     return response
 
 
+@app.post("/agent-admin/v1/agents", response_model=AgentResponse)
+async def list_agents_endpoint() -> AgentResponse:
+    status, message, data = await list_agents()
+    return AgentResponse(status=status, message=message, data=data)
+
+
+@app.get("/agent-admin/v1/agents/{did}", response_model=AgentResponse)
+async def get_agent_endpoint(did: str) -> AgentResponse:
+    status, message, data = await get_agent(did)
+    return AgentResponse(status=status, message=message, data=data)
+
 @app.post("/agent-admin/v1/register-admin", response_model=AgentResponse)
 async def register_admin_endpoint(payload: RegisterAdminRequest) -> AgentResponse:
-    status, message = await register_admin(payload.username)
-    return AgentResponse(status=status, message=message)
-
+    status, message = await register_admin(payload.username, payload.org)
+    return AgentResponse(status=status, message=message, data=None)
 
 @app.post("/agent-admin/v1/authorize-action", response_model=AuthorizeActionResponse)
 async def authorize_action_endpoint(
     payload: AuthorizeActionRequest,
 ) -> AuthorizeActionResponse:
-    authorized, message = await authorize_action(payload.agent_id, payload.action_intent)
+    authorized, message = await authorize_action(payload.agent_id, payload.action_intent, payload.agent_envelope)
     return AuthorizeActionResponse(authorized=authorized, message=message)
 
 
@@ -59,7 +82,7 @@ async def update_agent_policies_endpoint(
     status, message = await update_agent_policies(
         policy, creator_did, org_id, agent_name, agent_id
     )
-    return AgentResponse(status=status, message=message)
+    return AgentResponse(status=status, message=message, data=None)
 
 
 if __name__ == "__main__":
