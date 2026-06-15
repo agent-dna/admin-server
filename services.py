@@ -17,7 +17,9 @@ from db import (
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
+    agent_exists,
 )
+from recovery import journal, clear
 from config import settings
 
 POLICY_STORE = Path(__file__).parent / "policy_store"
@@ -97,21 +99,21 @@ async def create_agent(
             shutil.rmtree(agent_dir, ignore_errors=True)
             return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
 
-        # Agent is now deployed on-chain. Persist it to Postgres. We do NOT remove
-        # the agent dir on failure here — the on-chain deploy already succeeded, so
-        # we keep the local policy and surface the persistence error to the caller.
+        agent_payload = {
+            "did": agent_did,
+            "agent_name": agent_name,
+            "org_id": org_id,
+            "deployer_did": creator_did,
+            "policy": policy_content,
+        }
+        entry = journal("add_registered_agent", agent_payload)
         try:
-            add_registered_agent(
-                did=agent_did,
-                agent_name=agent_name,
-                org_id=org_id,
-                deployer_did=creator_did,
-                policy=policy_content,
-            )
+            add_registered_agent(**agent_payload)
+            clear(entry)
         except Exception as exc:
             return (
-                False,
-                f"Agent deployed (agent_id={agent_id}) but failed to persist to database: {exc}",
+                True,
+                f"Agent '{agent_name}' created; DB persistence deferred and will reconcile on restart ({exc})",
                 agent_id,
                 agent_did,
             )
@@ -148,8 +150,18 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
         api_key=settings.agentdna_api_key,
     )
     cbac = CBAC(provenance_layer)
+    
+    # Reject early if the agent (matched by did) isn't registered in our database,
+    # before doing any CBAC / CoCA work.
     try:
-        result = await cbac.verify_async(agent_id, action_intent)
+        if not agent_exists(agent_id):
+            return False, f"Agent '{agent_id}' is not whitelisted"
+    except Exception as exc:
+        return False, f"Error occurred while checking agent registration: {exc}"
+
+
+    try:
+        result = await cbac.verify_async(agent_id, action_intent) # user intent is str
     except Exception as exc:
         return False, f"Error occurred while verifying action: {exc}"
 
@@ -222,11 +234,22 @@ async def update_agent_policies(
 
     # Policy updated on-chain; mirror it into Postgres. The agents table is keyed
     # by did (which we don't have here), so match on (org_id, agent_name) — the
-    # same identity the policy_store layout uses.
+    # same identity the policy_store layout uses. Journal first so a DB failure is
+    # reconciled by replay() on the next startup rather than lost.
+    policy_payload = {
+        "org_id": org_id,
+        "agent_name": agent_name,
+        "policy": policy_content,
+    }
+    entry = journal("set_agent_policy", policy_payload)
     try:
-        updated = set_agent_policy(org_id, agent_name, policy_content)
+        updated = set_agent_policy(**policy_payload)
+        clear(entry)
     except Exception as exc:
-        return False, f"Policy updated on-chain but failed to persist to database: {exc}"
+        return (
+            True,
+            f"Policy for agent '{agent_name}' updated on-chain; DB persistence deferred and will reconcile on restart ({exc})",
+        )
 
     if not updated:
         return (

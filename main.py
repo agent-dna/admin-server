@@ -4,6 +4,7 @@ from fastapi import FastAPI, File, Form, UploadFile
 
 from config import settings
 from db import init_db, pool
+from recovery import replay
 from schemas import (
     AgentResponse,
     AuthorizeActionRequest,
@@ -24,6 +25,7 @@ from services import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    replay()  # reconcile `a`ny DB writes left pending by a prior failed/crashed run
     yield
     pool.close()
 

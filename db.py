@@ -130,3 +130,13 @@ def set_agent_policy(org_id: str, agent_name: str, policy: str) -> bool:
             (policy, org_id, agent_name),
         )
     return cur.rowcount > 0
+
+
+def agent_exists(did: str) -> bool:
+    """Return True if an agent with this did is registered in the agents table."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM agents WHERE did = %s",
+            (did,),
+        ).fetchone()
+    return row is not None
