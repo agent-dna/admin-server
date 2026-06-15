@@ -50,6 +50,13 @@ async def create_agent(
     org_id: str,
     agent_name: str,
 ) -> tuple[bool, str, str | None, str | None]:
+    provenance_layer = RubixTrustService(
+        alias="admin-server",
+        chain_url=settings.agentdna_chain_url,
+        api_key=settings.agentdna_api_key,
+    )
+    cbac = CBAC(provenance_layer)
+
     agent_dir = _agent_dir(org_id, agent_name)
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
     await _write_policy(policy, policy_path)
@@ -90,6 +97,7 @@ async def create_agent(
         policy_content = policy_path.read_text(encoding="utf-8")
         
         try:
+            
             agent_id = admin.deploy_agent_nft(
                 agent,
                 policy_content=policy_content,
@@ -98,6 +106,12 @@ async def create_agent(
         except Exception as exc:
             shutil.rmtree(agent_dir, ignore_errors=True)
             return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
+
+        # Pre compute NLI embeddings
+        try:
+            await cbac.precompute_policy(agent_did)
+        except Exception as exec:
+            return False, f"Failed to precompute policy: {exec}", None, None
 
         agent_payload = {
             "did": agent_did,
@@ -159,9 +173,13 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
     except Exception as exc:
         return False, f"Error occurred while checking agent registration: {exc}"
 
+    host_block = agent_envelope.get("host", agent_envelope)
+    chain = AgentDNA._walk_chain(host_block)
+    if not chain:
+        return False, "CoCA verification failed: no signed blocks found in envelope"
 
     try:
-        result = await cbac.verify_async(agent_id, action_intent) # user intent is str
+        result = await cbac.verify_async(agent_id, action_intent, chain[-1]["message"]) # user intent is str
     except Exception as exc:
         return False, f"Error occurred while verifying action: {exc}"
 
@@ -173,11 +191,6 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
     # and re-verify each layer's signature, proving *who* acted at every hop.
     # We recompute the signatures rather than trusting the embedded
     # `verification.signature_valid` flag carried in the envelope.
-    host_block = agent_envelope.get("host", agent_envelope)
-    chain = AgentDNA._walk_chain(host_block)
-    if not chain:
-        return False, "CoCA verification failed: no signed blocks found in envelope"
-
     for block in chain:
         signer_did = block.get("agent")
         envelope = block.get("envelope")
@@ -231,6 +244,19 @@ async def update_agent_policies(
         admin.update_agent_policy(agent_id, policy_content)
     except Exception as exc:
         return False, f"Failed to update policy with AgentDNA: {exc}"
+
+    # Pre compute NLI embeddings
+    try:
+        provenance_layer = RubixTrustService(
+        alias="admin-server",
+        chain_url=settings.agentdna_chain_url,
+        api_key=settings.agentdna_api_key,
+        )
+
+        cbac = CBAC(provenance_layer)
+        await cbac.precompute_policy(agent_id)
+    except Exception as exec:
+        return False, f"Failed to precompute policy: {exec}"
 
     # Policy updated on-chain; mirror it into Postgres. The agents table is keyed
     # by did (which we don't have here), so match on (org_id, agent_name) — the
