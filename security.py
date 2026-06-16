@@ -34,12 +34,26 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(subject: str) -> str:
-    """Create a signed JWT for the given subject (admin username)."""
+def create_access_token(subject: str, *, did: str, org_id: str) -> str:
+    """Create a signed JWT for the given subject (admin username).
+
+    The admin's ``did`` and ``org_id`` are embedded as claims so downstream
+    services can identify the admin from the token alone, without a lookup.
+    """
     now = datetime.now(timezone.utc)
     payload = {
         "sub": subject,
+        "did": did,
+        "org_id": org_id,
         "iat": now,
         "exp": now + timedelta(minutes=settings.jwt_expiry_minutes),
     }
-    return jwt.encode(payload, settings.jwt_secret, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(payload, settings.jwt_secret, algorithm=JWT_ALGORITHM)
+    print("=== Creating JWT ===")
+    print(f"  sub   : {subject}")
+    print(f"  did   : {did}")
+    print(f"  org_id: {org_id}")
+    print(f"  iat   : {payload['iat'].isoformat()} (UTC)")
+    print(f"  exp   : {payload['exp'].isoformat()} (UTC)")
+    print(f"  token : {token}")
+    return token

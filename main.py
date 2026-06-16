@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from db import init_db, pool
@@ -33,6 +34,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Admin Server", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/agent-admin/v1/create-agent", response_model=CreateAgentResponse)

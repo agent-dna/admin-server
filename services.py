@@ -14,7 +14,7 @@ from db import (
     add_admin,
     add_registered_agent,
     get_username_by_did,
-    get_admin_password_by_username,
+    get_admin_by_username,
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
@@ -161,16 +161,16 @@ async def register_admin(username: str, org: str, password: str) -> tuple[bool, 
 
 async def login(username: str, password: str) -> tuple[bool, str, str | None]:
     try:
-        password_hash = get_admin_password_by_username(username)
+        admin = get_admin_by_username(username)
     except Exception as exc:
         return False, f"Error occurred during login: {exc}", None
 
     # Same generic message whether the username is unknown or the password is
     # wrong, so the response can't be used to enumerate valid usernames.
-    if password_hash is None or not verify_password(password, password_hash):
+    if admin is None or not verify_password(password, admin["password"]):
         return False, "Invalid username or password", None
 
-    token = create_access_token(username)
+    token = create_access_token(username, did=admin["did"], org_id=admin["org"])
     return True, "Login successful", token
 
 
