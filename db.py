@@ -95,6 +95,18 @@ def get_admin_password_by_username(username: str) -> str | None:
         ).fetchone()
     return row[0] if row else None
 
+
+def get_admin_by_username(username: str) -> dict[str, str] | None:
+    """Return an admin's did, org, and password hash by username, or None if unknown."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT did, org, password FROM admin WHERE username = %s",
+            (username,),
+        ).fetchone()
+    if row is None:
+        return None
+    return {"did": row[0], "org": row[1], "password": row[2]}
+
 def get_all_agents() -> list[dict[str, str]]:
     """Return all registered agents (without policy — see get_agent_by_did for that)."""
     with pool.connection() as conn:
