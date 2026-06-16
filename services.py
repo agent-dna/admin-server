@@ -20,6 +20,7 @@ from db import (
     agent_exists,
 )
 from recovery import journal, clear
+from security import hash_password
 from config import settings
 
 POLICY_STORE = Path(__file__).parent / "policy_store"
@@ -138,7 +139,7 @@ async def create_agent(
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
 
 
-async def register_admin(username: str, org: str) -> tuple[bool, str]:
+async def register_admin(username: str, org: str, password: str) -> tuple[bool, str]:
     client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
 
     try:
@@ -150,7 +151,7 @@ async def register_admin(username: str, org: str) -> tuple[bool, str]:
         return False, f"Failed to initialize signer: {exc}"
 
     try:
-        add_admin(signer.did, username, org)
+        add_admin(signer.did, username, org, hash_password(password))
     except AdminConflictError as exc:
         return False, f"Admin registration conflict: {exc}"
 

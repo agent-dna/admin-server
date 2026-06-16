@@ -62,7 +62,7 @@ async def get_agent_endpoint(did: str) -> AgentResponse:
 
 @app.post("/agent-admin/v1/register-admin", response_model=AgentResponse)
 async def register_admin_endpoint(payload: RegisterAdminRequest) -> AgentResponse:
-    status, message = await register_admin(payload.username, payload.org)
+    status, message = await register_admin(payload.username, payload.org, payload.password)
     return AgentResponse(status=status, message=message, data=None)
 
 @app.post("/agent-admin/v1/authorize-action", response_model=AuthorizeActionResponse)

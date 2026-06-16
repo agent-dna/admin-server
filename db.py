@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE TABLE IF NOT EXISTS admin (
     did      TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
-    org      TEXT NOT NULL
+    org      TEXT NOT NULL,
+    password TEXT NOT NULL
 );
 """
 
@@ -61,13 +62,13 @@ def add_registered_agent(
         raise AgentConflictError(f"agent with did '{did}' is already registered") from exc
 
 
-def add_admin(did: str, username: str, org: str) -> None:
+def add_admin(did: str, username: str, org: str, password_hash: str) -> None:
     """Persist an admin. Raises AdminConflictError if the did or username exists."""
     try:
         with pool.connection() as conn:
             conn.execute(
-                "INSERT INTO admin (did, username, org) VALUES (%s, %s, %s)",
-                (did, username, org),
+                "INSERT INTO admin (did, username, org, password) VALUES (%s, %s, %s, %s)",
+                (did, username, org, password_hash),
             )
     except UniqueViolation as exc:
         raise AdminConflictError(
