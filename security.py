@@ -49,11 +49,4 @@ def create_access_token(subject: str, *, did: str, org_id: str) -> str:
         "exp": now + timedelta(minutes=settings.jwt_expiry_minutes),
     }
     token = jwt.encode(payload, settings.jwt_secret, algorithm=JWT_ALGORITHM)
-    print("=== Creating JWT ===")
-    print(f"  sub   : {subject}")
-    print(f"  did   : {did}")
-    print(f"  org_id: {org_id}")
-    print(f"  iat   : {payload['iat'].isoformat()} (UTC)")
-    print(f"  exp   : {payload['exp'].isoformat()} (UTC)")
-    print(f"  token : {token}")
     return token
