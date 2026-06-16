@@ -11,6 +11,7 @@ from schemas import (
     AuthorizeActionResponse,
     CreateAgentResponse,
     RegisterAdminRequest,
+    LoginRequest,
 )
 from services import (
     authorize_action,
@@ -19,6 +20,7 @@ from services import (
     update_agent_policies,
     list_agents,
     get_agent,
+    login,
 )
 
 
@@ -71,6 +73,12 @@ async def authorize_action_endpoint(
 ) -> AuthorizeActionResponse:
     authorized, message = await authorize_action(payload.agent_id, payload.action_intent, payload.agent_envelope)
     return AuthorizeActionResponse(authorized=authorized, message=message)
+
+
+@app.post("/agent-admin/v1/login", response_model=AgentResponse)
+async def login_endpoint(payload: LoginRequest) -> AgentResponse:
+    status, message, token = await login(payload.username, payload.password)
+    return AgentResponse(status=status, message=message, data=token)
 
 
 @app.post("/agent-admin/v1/update-agent-policies", response_model=AgentResponse)

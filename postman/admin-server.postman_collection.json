@@ -1,163 +1,22 @@
 {
   "info": {
     "name": "Admin Server",
-    "description": "Postman collection for the Admin Server endpoints. Manages agents and their policy files.",
+    "description": "Postman collection for the Admin Server endpoints. Manages admins, agents, their policy files, and authorization decisions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "a1f1c5d0-1d4f-4a4e-9b1d-admin-server-0001"
   },
   "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8000",
-      "type": "string"
-    },
-    {
-      "key": "creator_did",
-      "value": "did:example:creator",
-      "type": "string"
-    },
-    {
-      "key": "org_id",
-      "value": "org-1",
-      "type": "string"
-    },
-    {
-      "key": "agent_name",
-      "value": "agent-a",
-      "type": "string"
-    },
-    {
-      "key": "username",
-      "value": "admin-user",
-      "type": "string"
-    },
-    {
-      "key": "agent_id",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "creator_did", "value": "did:example:creator", "type": "string" },
+    { "key": "org_id", "value": "org-1", "type": "string" },
+    { "key": "agent_name", "value": "agent-a", "type": "string" },
+    { "key": "username", "value": "admin-user", "type": "string" },
+    { "key": "password", "value": "S3cure-pass!", "type": "string" },
+    { "key": "did", "value": "", "type": "string" },
+    { "key": "agent_id", "value": "", "type": "string" },
+    { "key": "jwt_token", "value": "", "type": "string" }
   ],
   "item": [
-    {
-      "name": "Create Agent",
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/agent-admin/v1/create-agent",
-          "host": ["{{base_url}}"],
-          "path": ["agent-admin", "v1", "create-agent"]
-        },
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            {
-              "key": "policy",
-              "type": "file",
-              "src": [],
-              "description": "Policy file to upload (any file type)."
-            },
-            {
-              "key": "creator_did",
-              "type": "text",
-              "value": "{{creator_did}}",
-              "description": "DID of the user creating the agent."
-            },
-            {
-              "key": "org_id",
-              "type": "text",
-              "value": "{{org_id}}",
-              "description": "Organization ID the agent belongs to."
-            },
-            {
-              "key": "agent_name",
-              "type": "text",
-              "value": "{{agent_name}}",
-              "description": "Name of the agent to create."
-            }
-          ]
-        },
-        "description": "Creates a new agent, stores its policy file under a UUID-suffixed filename, and registers the agent with AgentDNA. Fails if an agent with the same `org_id` and `agent_name` already exists, or if AgentDNA registration fails (in which case the on-disk artifacts are rolled back)."
-      },
-      "response": [
-        {
-          "name": "Success",
-          "originalRequest": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/agent-admin/v1/create-agent",
-              "host": ["{{base_url}}"],
-              "path": ["agent-admin", "v1", "create-agent"]
-            }
-          },
-          "status": "OK",
-          "code": 200,
-          "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": true,\n  \"message\": \"Agent 'agent-a' created successfully\",\n  \"agent_id\": \"<nft-id>\",\n  \"agent_did\": \"<agent-did>\"\n}"
-        },
-        {
-          "name": "Agent Already Exists",
-          "originalRequest": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/agent-admin/v1/create-agent",
-              "host": ["{{base_url}}"],
-              "path": ["agent-admin", "v1", "create-agent"]
-            }
-          },
-          "status": "OK",
-          "code": 200,
-          "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Agent 'agent-a' already exists for org 'org-1'\",\n  \"agent_id\": null,\n  \"agent_did\": null\n}"
-        },
-        {
-          "name": "Missing Field",
-          "originalRequest": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/agent-admin/v1/create-agent",
-              "host": ["{{base_url}}"],
-              "path": ["agent-admin", "v1", "create-agent"]
-            }
-          },
-          "status": "Unprocessable Entity",
-          "code": 422,
-          "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"creator_did\"],\n      \"msg\": \"Field required\",\n      \"input\": null\n    }\n  ]\n}"
-        },
-        {
-          "name": "AgentDNA Registration Failed",
-          "originalRequest": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/agent-admin/v1/create-agent",
-              "host": ["{{base_url}}"],
-              "path": ["agent-admin", "v1", "create-agent"]
-            }
-          },
-          "status": "OK",
-          "code": 200,
-          "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to register agent with AgentDNA: <error details>\",\n  \"agent_id\": null,\n  \"agent_did\": null\n}"
-        }
-      ]
-    },
     {
       "name": "Register Admin",
       "request": {
@@ -172,88 +31,276 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"{{username}}\"\n}",
-          "options": {
-            "raw": { "language": "json" }
-          }
+          "raw": "{ \"username\": \"{{username}}\", \"org\": \"{{org_id}}\", \"password\": \"{{password}}\" }",
+          "options": { "raw": { "language": "json" } }
         },
-        "description": "Registers an admin user by initializing a Rubix signer. On success, `message` contains the admin's DID (IPFS CID v1)."
+        "description": "Registers an admin: initializes a Rubix signer and stores (did, username, org, bcrypt-hashed password) in the `admin` table. On success, `message` contains the admin's DID (IPFS CID v1) and `data` is null."
       },
       "response": [
         {
           "name": "Success",
           "originalRequest": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
               "raw": "{{base_url}}/agent-admin/v1/register-admin",
               "host": ["{{base_url}}"],
               "path": ["agent-admin", "v1", "register-admin"]
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"username\": \"admin-user\"\n}"
-            }
+            "body": { "mode": "raw", "raw": "{ \"username\": \"admin-user\", \"org\": \"org-1\", \"password\": \"S3cure-pass!\" }" }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": true,\n  \"message\": \"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\"\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi\",\n  \"data\": null\n}"
         },
         {
-          "name": "Signer Init Failed",
+          "name": "Conflict",
           "originalRequest": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
               "raw": "{{base_url}}/agent-admin/v1/register-admin",
               "host": ["{{base_url}}"],
               "path": ["agent-admin", "v1", "register-admin"]
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"username\": \"admin-user\"\n}"
+            "body": { "mode": "raw", "raw": "{ \"username\": \"admin-user\", \"org\": \"org-1\", \"password\": \"S3cure-pass!\" }" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Admin registration conflict: admin with did '...' or username 'admin-user' is already registered\",\n  \"data\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const res = pm.response.json();",
+              "if (res && res.status && res.data) {",
+              "  pm.collectionVariables.set('jwt_token', res.data);",
+              "  console.log('Saved jwt_token');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/login",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "login"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{ \"username\": \"{{username}}\", \"password\": \"{{password}}\" }",
+          "options": { "raw": { "language": "json" } }
+        },
+        "description": "Verifies admin credentials and returns a signed JWT (HS256) in `data` on success. The test script saves the token to the `jwt_token` collection variable. An unknown username and a wrong password return the same generic failure message (no user enumeration)."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/login",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "login"]
+            },
+            "body": { "mode": "raw", "raw": "{ \"username\": \"admin-user\", \"password\": \"S3cure-pass!\" }" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Login successful\",\n  \"data\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.<payload>.<signature>\"\n}"
+        },
+        {
+          "name": "Invalid Credentials",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/login",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "login"]
+            },
+            "body": { "mode": "raw", "raw": "{ \"username\": \"admin-user\", \"password\": \"wrong\" }" }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Invalid username or password\",\n  \"data\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Create Agent",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/create-agent",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "create-agent"]
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "policy", "type": "file", "src": [], "description": "Policy file to upload (any file type)." },
+            { "key": "creator_did", "type": "text", "value": "{{creator_did}}", "description": "DID of the admin creating the agent (must be registered)." },
+            { "key": "org_id", "type": "text", "value": "{{org_id}}", "description": "Organization ID the agent belongs to." },
+            { "key": "agent_name", "type": "text", "value": "{{agent_name}}", "description": "Name of the agent to create." }
+          ]
+        },
+        "description": "Creates a new agent: stores its policy file under a UUID-suffixed filename, deploys the agent NFT via AgentDNA, and records the agent in the `agents` table. The on-chain deploy is the commit point; if the deploy succeeds but the DB write fails, the response is still status:true and the write is journaled for reconciliation on the next startup."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "create-agent"]
             }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to initialize signer: <error details>\"\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Agent 'agent-a' created successfully\",\n  \"agent_id\": \"<nft-id>\",\n  \"agent_did\": \"<agent-did>\"\n}"
+        },
+        {
+          "name": "Admin Not Registered",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "create-agent"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Admin 'bafybeic...' is not registered locally. Try requesting registration of admin again.\",\n  \"agent_id\": null,\n  \"agent_did\": null\n}"
         },
         {
           "name": "Missing Field",
           "originalRequest": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [],
             "url": {
-              "raw": "{{base_url}}/agent-admin/v1/register-admin",
+              "raw": "{{base_url}}/agent-admin/v1/create-agent",
               "host": ["{{base_url}}"],
-              "path": ["agent-admin", "v1", "register-admin"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
+              "path": ["agent-admin", "v1", "create-agent"]
             }
           },
           "status": "Unprocessable Entity",
           "code": 422,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"username\"],\n      \"msg\": \"Field required\",\n      \"input\": {}\n    }\n  ]\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"detail\": [\n    {\n      \"type\": \"missing\",\n      \"loc\": [\"body\", \"creator_did\"],\n      \"msg\": \"Field required\",\n      \"input\": null\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "List Agents",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/agents",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "agents"]
+        },
+        "description": "Lists all registered agents (lightweight view, without the policy body). Use Get Agent for the full record including policy."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/agents",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "agents"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Retrieved 1 agent(s)\",\n  \"data\": [\n    {\n      \"did\": \"<agent-did>\",\n      \"agent_name\": \"agent-a\",\n      \"org_id\": \"org-1\",\n      \"deployer_did\": \"<admin-did>\"\n    }\n  ]\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Agent",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/agents/{{did}}",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "agents", "{{did}}"]
+        },
+        "description": "Fetches a single agent by its DID, including the full policy text. Set the `did` collection variable to the agent's DID."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/agents/{{did}}",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "agents", "{{did}}"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Agent retrieved\",\n  \"data\": {\n    \"did\": \"<agent-did>\",\n    \"agent_name\": \"agent-a\",\n    \"org_id\": \"org-1\",\n    \"deployer_did\": \"<admin-did>\",\n    \"policy\": \"<full policy text>\"\n  }\n}"
+        },
+        {
+          "name": "Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/agents/{{did}}",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "agents", "{{did}}"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"No agent found with did '<agent-did>'\",\n  \"data\": null\n}"
         }
       ]
     },
@@ -271,63 +318,62 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"agent_id\": \"{{agent_id}}\",\n  \"action_intent\": \"send-slack-message\"\n}",
-          "options": {
-            "raw": { "language": "json" }
-          }
+          "raw": "{ \"agent_id\": \"{{agent_id}}\", \"action_intent\": \"create_issue\", \"agent_envelope\": { \"host\": { \"agent\": \"<worker-agent-did>\", \"name\": \"WorkerAgent\", \"type\": \"execute\", \"signature\": \"<hex-signature>\", \"verification\": { \"signature_valid\": true, \"trust_issues\": [] }, \"envelope\": { \"payload\": { \"decision\": \"execute\", \"original_message\": \"create_issue on org/repo\" }, \"parent_block\": { \"_comment\": \"Full nested delegation chain - see coca_envelope.json\" } } } } }",
+          "options": { "raw": { "language": "json" } }
         },
-        "description": "Authorization decision endpoint for the CBAC middleware. The middleware sits between an agent and the target App; before calling the App it asks this endpoint whether the agent's `action_intent` is allowed for the given `agent_id`. The admin server returns allow/deny based on the agent's deployed policy and never talks to the App itself — the middleware is what forwards or blocks the original call."
+        "description": "Authorization decision endpoint for the CBAC middleware. Runs three checks (all must pass): (1) the agent_id is whitelisted in the `agents` table, (2) CBAC permits the action_intent under the agent's policy, (3) CoCA re-verifies every signature in the agent_envelope delegation chain. The agent_envelope below is abbreviated - paste the contents of coca_envelope.json for a complete, signature-valid example."
       },
       "response": [
         {
           "name": "Authorized",
           "originalRequest": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
               "raw": "{{base_url}}/agent-admin/v1/authorize-action",
               "host": ["{{base_url}}"],
               "path": ["agent-admin", "v1", "authorize-action"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"agent_id\": \"<nft-id>\",\n  \"action_intent\": \"send-slack-message\"\n}"
             }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"authorized\": true,\n  \"message\": \"Action 'send-slack-message' authorized for agent '<nft-id>'\"\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"authorized\": true,\n  \"message\": \"Action 'create_issue' authorized for agent '<agent-id>'\"\n}"
         },
         {
-          "name": "Denied",
+          "name": "Denied (Not Whitelisted)",
           "originalRequest": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": {
               "raw": "{{base_url}}/agent-admin/v1/authorize-action",
               "host": ["{{base_url}}"],
               "path": ["agent-admin", "v1", "authorize-action"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"agent_id\": \"<nft-id>\",\n  \"action_intent\": \"delete-channel\"\n}"
             }
           },
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"authorized\": false,\n  \"message\": \"Action 'delete-channel' not permitted by agent's policy\"\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"authorized\": false,\n  \"message\": \"Agent '<agent-id>' is not whitelisted\"\n}"
+        },
+        {
+          "name": "Denied (CoCA Failure)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/authorize-action",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "authorize-action"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"authorized\": false,\n  \"message\": \"CoCA verification failed: invalid signature for layer 'WorkerAgent' (<did>)\"\n}"
         }
       ]
     },
@@ -344,39 +390,14 @@
         "body": {
           "mode": "formdata",
           "formdata": [
-            {
-              "key": "policy",
-              "type": "file",
-              "src": [],
-              "description": "Replacement policy file."
-            },
-            {
-              "key": "creator_did",
-              "type": "text",
-              "value": "{{creator_did}}",
-              "description": "DID of the user updating the agent."
-            },
-            {
-              "key": "org_id",
-              "type": "text",
-              "value": "{{org_id}}",
-              "description": "Organization ID the agent belongs to."
-            },
-            {
-              "key": "agent_name",
-              "type": "text",
-              "value": "{{agent_name}}",
-              "description": "Name of the agent whose policy is being updated."
-            },
-            {
-              "key": "agent_id",
-              "type": "text",
-              "value": "{{agent_id}}",
-              "description": "On-chain NFT id of the agent (returned by /create-agent)."
-            }
+            { "key": "policy", "type": "file", "src": [], "description": "Replacement policy file." },
+            { "key": "creator_did", "type": "text", "value": "{{creator_did}}", "description": "DID of the admin updating the agent (must be registered)." },
+            { "key": "org_id", "type": "text", "value": "{{org_id}}", "description": "Organization ID the agent belongs to." },
+            { "key": "agent_name", "type": "text", "value": "{{agent_name}}", "description": "Name of the agent whose policy is being updated." },
+            { "key": "agent_id", "type": "text", "value": "{{agent_id}}", "description": "On-chain NFT id of the agent (returned by /create-agent)." }
           ]
         },
-        "description": "Stores a new policy file (UUID-suffixed) for an existing agent and pushes the update to AgentDNA via `update_agent_policy(agent_id, ...)`. Fails if the caller's `creator_did` isn't a registered admin or if the AgentDNA update call fails."
+        "description": "Stores a new policy file (UUID-suffixed) for an existing agent, pushes the update to AgentDNA via update_agent_policy(agent_id, ...), and updates the stored policy in the `agents` table (matched by org_id + agent_name). Fails if the caller's creator_did isn't a registered admin or if the AgentDNA update call fails."
       },
       "response": [
         {
@@ -393,29 +414,8 @@
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": true,\n  \"message\": \"Policy for agent 'agent-a' updated successfully\"\n}"
-        },
-        {
-          "name": "Agent Not Found",
-          "originalRequest": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/agent-admin/v1/update-agent-policies",
-              "host": ["{{base_url}}"],
-              "path": ["agent-admin", "v1", "update-agent-policies"]
-            }
-          },
-          "status": "OK",
-          "code": 200,
-          "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Agent 'agent-a' not found for org 'org-1'\"\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Policy for agent 'agent-a' updated successfully\",\n  \"data\": null\n}"
         },
         {
           "name": "AgentDNA Update Failed",
@@ -431,10 +431,8 @@
           "status": "OK",
           "code": 200,
           "_postman_previewlanguage": "json",
-          "header": [
-            { "key": "Content-Type", "value": "application/json" }
-          ],
-          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to update policy with AgentDNA: <error details>\"\n}"
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"Failed to update policy with AgentDNA: <error details>\",\n  \"data\": null\n}"
         }
       ]
     }

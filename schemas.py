@@ -13,6 +13,11 @@ class RegisterAdminRequest(BaseModel):
     password: str = Field(..., description="Admin password (stored salted and hashed)")
 
 
+class LoginRequest(BaseModel):
+    username: str = Field(..., description="Admin username")
+    password: str = Field(..., description="Admin password")
+
+
 class CreateAgentResponse(BaseModel):
     status: bool = Field(..., description="Whether the operation succeeded")
     message: str = Field(..., description="Human-readable result message")

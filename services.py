@@ -14,13 +14,14 @@ from db import (
     add_admin,
     add_registered_agent,
     get_username_by_did,
+    get_admin_password_by_username,
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
     agent_exists,
 )
 from recovery import journal, clear
-from security import hash_password
+from security import hash_password, verify_password, create_access_token
 from config import settings
 
 POLICY_STORE = Path(__file__).parent / "policy_store"
@@ -156,6 +157,21 @@ async def register_admin(username: str, org: str, password: str) -> tuple[bool, 
         return False, f"Admin registration conflict: {exc}"
 
     return True, signer.did
+
+
+async def login(username: str, password: str) -> tuple[bool, str, str | None]:
+    try:
+        password_hash = get_admin_password_by_username(username)
+    except Exception as exc:
+        return False, f"Error occurred during login: {exc}", None
+
+    # Same generic message whether the username is unknown or the password is
+    # wrong, so the response can't be used to enumerate valid usernames.
+    if password_hash is None or not verify_password(password, password_hash):
+        return False, "Invalid username or password", None
+
+    token = create_access_token(username)
+    return True, "Login successful", token
 
 
 async def authorize_action(agent_id: str, action_intent: str, agent_envelope: dict) -> tuple[bool, str]:
