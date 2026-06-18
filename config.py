@@ -15,7 +15,7 @@ class Settings:
     # Comma-separated list of browser origins allowed to call the API (CORS).
     cors_origins: list[str] = [
         o.strip()
-        for o in os.getenv("CORS_ORIGINS", "http://localhost:4003").split(",")
+        for o in os.getenv("CORS_ORIGINS", "*").split(",")
         if o.strip()
     ]
 

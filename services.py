@@ -195,10 +195,19 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
     if not chain:
         return False, "CoCA verification failed: no signed blocks found in envelope"
 
+    root_intent = ""
     try:
-        result = await cbac.verify_async(agent_id, action_intent, chain[-1]["message"]) # user intent is str
+        root_intent = chain[-1]['envelope']['payload']['message']
     except Exception as exc:
-        return False, f"Error occurred while verifying action: {exc}"
+        return False, f"Error occurred while extracting root intent from envelope: {exc}"
+
+    if root_intent == "":
+        return False, "CBAC verification failed: root intent is empty"
+
+    try:
+        result = await cbac.verify_async(agent_id, action_intent, root_intent)
+    except Exception as exc:
+        return False, f"CBAC verification failed: {exc}"
 
     cbac_decision = result.decision
     if cbac_decision not in ["allow", "deny"]:
@@ -224,7 +233,6 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
 
         if not signature_valid:
             return False, f"CoCA verification failed: invalid signature for layer '{layer}' ({signer_did})"
-
 
     if cbac_decision == "allow":
         return True, result.reason or f"Action '{action_intent}' authorized for agent '{agent_id}'"
