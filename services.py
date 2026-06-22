@@ -14,10 +14,14 @@ from db import (
     add_admin,
     add_registered_agent,
     get_username_by_did,
+    get_admin_by_username,
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
+    agent_exists,
 )
+from recovery import journal, clear
+from security import hash_password, verify_password, create_access_token
 from config import settings
 
 POLICY_STORE = Path(__file__).parent / "policy_store"
@@ -48,6 +52,13 @@ async def create_agent(
     org_id: str,
     agent_name: str,
 ) -> tuple[bool, str, str | None, str | None]:
+    provenance_layer = RubixTrustService(
+        alias="admin-server",
+        chain_url=settings.agentdna_chain_url,
+        api_key=settings.agentdna_api_key,
+    )
+    cbac = CBAC(provenance_layer)
+
     agent_dir = _agent_dir(org_id, agent_name)
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
     await _write_policy(policy, policy_path)
@@ -88,6 +99,7 @@ async def create_agent(
         policy_content = policy_path.read_text(encoding="utf-8")
         
         try:
+            
             agent_id = admin.deploy_agent_nft(
                 agent,
                 policy_content=policy_content,
@@ -97,21 +109,27 @@ async def create_agent(
             shutil.rmtree(agent_dir, ignore_errors=True)
             return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
 
-        # Agent is now deployed on-chain. Persist it to Postgres. We do NOT remove
-        # the agent dir on failure here — the on-chain deploy already succeeded, so
-        # we keep the local policy and surface the persistence error to the caller.
+        # Pre compute NLI embeddings
         try:
-            add_registered_agent(
-                did=agent_did,
-                agent_name=agent_name,
-                org_id=org_id,
-                deployer_did=creator_did,
-                policy=policy_content,
-            )
+            await cbac.precompute_policy(agent_did)
+        except Exception as exec:
+            return False, f"Failed to precompute policy: {exec}", None, None
+
+        agent_payload = {
+            "did": agent_did,
+            "agent_name": agent_name,
+            "org_id": org_id,
+            "deployer_did": creator_did,
+            "policy": policy_content,
+        }
+        entry = journal("add_registered_agent", agent_payload)
+        try:
+            add_registered_agent(**agent_payload)
+            clear(entry)
         except Exception as exc:
             return (
-                False,
-                f"Agent deployed (agent_id={agent_id}) but failed to persist to database: {exc}",
+                True,
+                f"Agent '{agent_name}' created; DB persistence deferred and will reconcile on restart ({exc})",
                 agent_id,
                 agent_did,
             )
@@ -122,7 +140,7 @@ async def create_agent(
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
 
 
-async def register_admin(username: str, org: str) -> tuple[bool, str]:
+async def register_admin(username: str, org: str, password: str) -> tuple[bool, str]:
     client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
 
     try:
@@ -134,11 +152,26 @@ async def register_admin(username: str, org: str) -> tuple[bool, str]:
         return False, f"Failed to initialize signer: {exc}"
 
     try:
-        add_admin(signer.did, username, org)
+        add_admin(signer.did, username, org, hash_password(password))
     except AdminConflictError as exc:
         return False, f"Admin registration conflict: {exc}"
 
     return True, signer.did
+
+
+async def login(username: str, password: str) -> tuple[bool, str, str | None]:
+    try:
+        admin = get_admin_by_username(username)
+    except Exception as exc:
+        return False, f"Error occurred during login: {exc}", None
+
+    # Same generic message whether the username is unknown or the password is
+    # wrong, so the response can't be used to enumerate valid usernames.
+    if admin is None or not verify_password(password, admin["password"]):
+        return False, "Invalid username or password", None
+
+    token = create_access_token(username, did=admin["did"], org_id=admin["org"])
+    return True, "Login successful", token
 
 
 async def authorize_action(agent_id: str, action_intent: str, agent_envelope: dict) -> tuple[bool, str]:
@@ -148,10 +181,33 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
         api_key=settings.agentdna_api_key,
     )
     cbac = CBAC(provenance_layer)
+    
+    # Reject early if the agent (matched by did) isn't registered in our database,
+    # before doing any CBAC / CoCA work.
     try:
-        result = await cbac.verify_async(agent_id, action_intent)
+        if not agent_exists(agent_id):
+            return False, f"Agent '{agent_id}' is not whitelisted"
     except Exception as exc:
-        return False, f"Error occurred while verifying action: {exc}"
+        return False, f"Error occurred while checking agent registration: {exc}"
+
+    host_block = agent_envelope.get("host", agent_envelope)
+    chain = AgentDNA._walk_chain(host_block)
+    if not chain:
+        return False, "CoCA verification failed: no signed blocks found in envelope"
+
+    root_intent = ""
+    try:
+        root_intent = chain[-1]['envelope']['payload']['message']
+    except Exception as exc:
+        return False, f"Error occurred while extracting root intent from envelope: {exc}"
+
+    if root_intent == "":
+        return False, "CBAC verification failed: root intent is empty"
+
+    try:
+        result = await cbac.verify_async(agent_id, action_intent, root_intent)
+    except Exception as exc:
+        return False, f"CBAC verification failed: {exc}"
 
     cbac_decision = result.decision
     if cbac_decision not in ["allow", "deny"]:
@@ -161,11 +217,6 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
     # and re-verify each layer's signature, proving *who* acted at every hop.
     # We recompute the signatures rather than trusting the embedded
     # `verification.signature_valid` flag carried in the envelope.
-    host_block = agent_envelope.get("host", agent_envelope)
-    chain = AgentDNA._walk_chain(host_block)
-    if not chain:
-        return False, "CoCA verification failed: no signed blocks found in envelope"
-
     for block in chain:
         signer_did = block.get("agent")
         envelope = block.get("envelope")
@@ -182,7 +233,6 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
 
         if not signature_valid:
             return False, f"CoCA verification failed: invalid signature for layer '{layer}' ({signer_did})"
-
 
     if cbac_decision == "allow":
         return True, result.reason or f"Action '{action_intent}' authorized for agent '{agent_id}'"
@@ -220,13 +270,37 @@ async def update_agent_policies(
     except Exception as exc:
         return False, f"Failed to update policy with AgentDNA: {exc}"
 
+    # Pre compute NLI embeddings
+    try:
+        provenance_layer = RubixTrustService(
+        alias="admin-server",
+        chain_url=settings.agentdna_chain_url,
+        api_key=settings.agentdna_api_key,
+        )
+
+        cbac = CBAC(provenance_layer)
+        await cbac.precompute_policy(agent_id)
+    except Exception as exec:
+        return False, f"Failed to precompute policy: {exec}"
+
     # Policy updated on-chain; mirror it into Postgres. The agents table is keyed
     # by did (which we don't have here), so match on (org_id, agent_name) — the
-    # same identity the policy_store layout uses.
+    # same identity the policy_store layout uses. Journal first so a DB failure is
+    # reconciled by replay() on the next startup rather than lost.
+    policy_payload = {
+        "org_id": org_id,
+        "agent_name": agent_name,
+        "policy": policy_content,
+    }
+    entry = journal("set_agent_policy", policy_payload)
     try:
-        updated = set_agent_policy(org_id, agent_name, policy_content)
+        updated = set_agent_policy(**policy_payload)
+        clear(entry)
     except Exception as exc:
-        return False, f"Policy updated on-chain but failed to persist to database: {exc}"
+        return (
+            True,
+            f"Policy for agent '{agent_name}' updated on-chain; DB persistence deferred and will reconcile on restart ({exc})",
+        )
 
     if not updated:
         return (

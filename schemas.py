@@ -10,6 +10,12 @@ class AgentResponse(BaseModel):
 class RegisterAdminRequest(BaseModel):
     username: str = Field(..., description="Username of the admin to register")
     org: str = Field(..., description="Organization the admin belongs to")
+    password: str = Field(..., description="Admin password (stored salted and hashed)")
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(..., description="Admin username")
+    password: str = Field(..., description="Admin password")
 
 
 class CreateAgentResponse(BaseModel):

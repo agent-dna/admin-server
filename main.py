@@ -1,15 +1,18 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 from config import settings
 from db import init_db, pool
+from recovery import replay
 from schemas import (
     AgentResponse,
     AuthorizeActionRequest,
     AuthorizeActionResponse,
     CreateAgentResponse,
     RegisterAdminRequest,
+    LoginRequest,
 )
 from services import (
     authorize_action,
@@ -18,17 +21,27 @@ from services import (
     update_agent_policies,
     list_agents,
     get_agent,
+    login,
 )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    replay()  # reconcile `a`ny DB writes left pending by a prior failed/crashed run
     yield
     pool.close()
 
 
 app = FastAPI(title="Admin Server", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/agent-admin/v1/create-agent", response_model=CreateAgentResponse)
@@ -60,7 +73,7 @@ async def get_agent_endpoint(did: str) -> AgentResponse:
 
 @app.post("/agent-admin/v1/register-admin", response_model=AgentResponse)
 async def register_admin_endpoint(payload: RegisterAdminRequest) -> AgentResponse:
-    status, message = await register_admin(payload.username, payload.org)
+    status, message = await register_admin(payload.username, payload.org, payload.password)
     return AgentResponse(status=status, message=message, data=None)
 
 @app.post("/agent-admin/v1/authorize-action", response_model=AuthorizeActionResponse)
@@ -69,6 +82,12 @@ async def authorize_action_endpoint(
 ) -> AuthorizeActionResponse:
     authorized, message = await authorize_action(payload.agent_id, payload.action_intent, payload.agent_envelope)
     return AuthorizeActionResponse(authorized=authorized, message=message)
+
+
+@app.post("/agent-admin/v1/login", response_model=AgentResponse)
+async def login_endpoint(payload: LoginRequest) -> AgentResponse:
+    status, message, token = await login(payload.username, payload.password)
+    return AgentResponse(status=status, message=message, data=token)
 
 
 @app.post("/agent-admin/v1/update-agent-policies", response_model=AgentResponse)

@@ -10,5 +10,13 @@ class Settings:
     agentdna_api_key: str = os.getenv("AGENTDNA_API_KEY", "")
     agentdna_chain_url: str = os.getenv("AGENTDNA_CHAIN_URL", "")
     database_url: str = os.getenv("DATABASE_URL", "")
+    jwt_secret: str = os.getenv("JWT_SECRET", "")
+    jwt_expiry_minutes: int = int(os.getenv("JWT_EXPIRY_MINUTES", "10000"))
+    # Comma-separated list of browser origins allowed to call the API (CORS).
+    cors_origins: list[str] = [
+        o.strip()
+        for o in os.getenv("CORS_ORIGINS", "*").split(",")
+        if o.strip()
+    ]
 
 settings = Settings()

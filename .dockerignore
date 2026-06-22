@@ -9,6 +9,7 @@ ENV/
 
 # Local runtime state that must not leak into the image
 policy_store/
+.log/
 s.json
 
 # Version control / IDE

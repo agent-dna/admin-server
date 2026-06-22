@@ -4,5 +4,7 @@ python-multipart==0.0.12
 pydantic==2.9.2
 python-dotenv==1.0.1
 psycopg[binary,pool]==3.2.3
+bcrypt==4.2.1
+PyJWT==2.10.1
 rubix-py==1.1.1
-agent-dna @ git+https://github.com/rubixchain/agentdna.git@arnab/cbac-coca-verification
+agent-dna @ git+https://github.com/rubixchain/agentdna.git@arnab/chores

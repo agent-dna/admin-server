@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE TABLE IF NOT EXISTS admin (
     did      TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
-    org      TEXT NOT NULL
+    org      TEXT NOT NULL,
+    password TEXT NOT NULL
 );
 """
 
@@ -61,13 +62,13 @@ def add_registered_agent(
         raise AgentConflictError(f"agent with did '{did}' is already registered") from exc
 
 
-def add_admin(did: str, username: str, org: str) -> None:
+def add_admin(did: str, username: str, org: str, password_hash: str) -> None:
     """Persist an admin. Raises AdminConflictError if the did or username exists."""
     try:
         with pool.connection() as conn:
             conn.execute(
-                "INSERT INTO admin (did, username, org) VALUES (%s, %s, %s)",
-                (did, username, org),
+                "INSERT INTO admin (did, username, org, password) VALUES (%s, %s, %s, %s)",
+                (did, username, org, password_hash),
             )
     except UniqueViolation as exc:
         raise AdminConflictError(
@@ -83,6 +84,28 @@ def get_username_by_did(did: str) -> str | None:
             (did,),
         ).fetchone()
     return row[0] if row else None
+
+
+def get_admin_password_by_username(username: str) -> str | None:
+    """Return the stored password hash for an admin username, or None if unknown."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT password FROM admin WHERE username = %s",
+            (username,),
+        ).fetchone()
+    return row[0] if row else None
+
+
+def get_admin_by_username(username: str) -> dict[str, str] | None:
+    """Return an admin's did, org, and password hash by username, or None if unknown."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT did, org, password FROM admin WHERE username = %s",
+            (username,),
+        ).fetchone()
+    if row is None:
+        return None
+    return {"did": row[0], "org": row[1], "password": row[2]}
 
 def get_all_agents() -> list[dict[str, str]]:
     """Return all registered agents (without policy — see get_agent_by_did for that)."""
@@ -130,3 +153,13 @@ def set_agent_policy(org_id: str, agent_name: str, policy: str) -> bool:
             (policy, org_id, agent_name),
         )
     return cur.rowcount > 0
+
+
+def agent_exists(did: str) -> bool:
+    """Return True if an agent with this did is registered in the agents table."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT 1 FROM agents WHERE did = %s",
+            (did,),
+        ).fetchone()
+    return row is not None
