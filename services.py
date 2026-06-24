@@ -8,8 +8,9 @@ from rubix.signer import Signer
 from rubix.client import RubixClient
 from agentdna.cbac import CBAC
 from agentdna.provenance import Provenance
-from agentdna.helpers import unwrap_workflow
+from agentdna.helpers import get_root_envelope
 from agentdna.types import IntentWorkflow
+from agentdna.verifier import verify_heavy
 
 from db import (
     AdminConflictError,
@@ -93,7 +94,6 @@ async def create_agent(
         policy_content = policy_path.read_text(encoding="utf-8")
         
         try:
-            
             agent_id = admin.create_agent_card(
                 agent,
                 policy_file=policy_path,
@@ -167,7 +167,7 @@ async def login(username: str, password: str) -> tuple[bool, str, str | None]:
     return True, "Login successful", token
 
 
-async def authorize_action(agent_id: str, action_intent: str, agent_envelope: IntentWorkflow) -> tuple[bool, str]:
+async def authorize_action(agent_id: str, action_intent: str, intent_workflow: IntentWorkflow) -> tuple[bool, str]:
     provenance_layer = Provenance(
         name="admin-server",
         provenance_url=settings.agentdna_chain_url,
@@ -184,16 +184,14 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: In
         return False, f"Error occurred while checking agent registration: {exc}"
 
     # CoCA verification
-    from agentdna.verifier import verify_heavy
-
-    verify_heavy(provenance=provenance_layer, workflow=agent_envelope)
-    chain = unwrap_workflow(agent_envelope)
-    if not chain:
-        return False, "CoCA verification failed: no signed blocks found in envelope"
+    coca_verification_result = verify_heavy(provenance=provenance_layer, workflow=intent_workflow)
+    if not coca_verification_result.valid:
+        return False, f"CoCA verification failed: issues found: {coca_verification_result.issues}"
 
     root_intent = ""
     try:
-        root_intent = chain[-1].payload
+        root_envelope = get_root_envelope(intent_workflow)
+        root_intent = root_envelope.payload
     except Exception as exc:
         return False, f"Error occurred while extracting root intent from envelope: {exc}"
 
