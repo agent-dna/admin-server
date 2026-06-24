@@ -3,11 +3,13 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import UploadFile
-from agentdna import AgentDNA
+from agentdna.core import AgentDNA
 from rubix.signer import Signer
 from rubix.client import RubixClient
 from agentdna.cbac import CBAC
-from agentdna.trust import RubixTrustService
+from agentdna.provenance import Provenance
+from agentdna.helpers import unwrap_workflow
+from agentdna.types import IntentWorkflow
 
 from db import (
     AdminConflictError,
@@ -52,12 +54,12 @@ async def create_agent(
     org_id: str,
     agent_name: str,
 ) -> tuple[bool, str, str | None, str | None]:
-    provenance_layer = RubixTrustService(
-        alias="admin-server",
-        chain_url=settings.agentdna_chain_url,
+    provenance_layer = Provenance(
+        name="admin-server",
+        provenance_url=settings.agentdna_chain_url,
         api_key=settings.agentdna_api_key,
     )
-    cbac = CBAC(provenance_layer)
+    cbac = CBAC(provenance_layer, "")
 
     agent_dir = _agent_dir(org_id, agent_name)
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
@@ -75,48 +77,39 @@ async def create_agent(
             )
 
         admin = AgentDNA(
-            chain_url=settings.agentdna_chain_url,
-            alias=admin_username,
-            api_key=settings.agentdna_api_key,
-            kind="user",
-            enable_nft=False,
+            name=admin_username,
+            type="human",
+            provenance_layer_url=settings.agentdna_chain_url,
+            api_key=settings.agentdna_api_key
         )
 
         agent = AgentDNA(
-            chain_url=settings.agentdna_chain_url,
-            alias=agent_name,
-            api_key=settings.agentdna_api_key,
-            kind="agent",
-            policy_file=policy_path,
-            metadata={
-                "orgId": org_id,
-                "deployer": creator_did,
-                "agent_name": agent_name,
-            },
-            cbac=True,
+            name=agent_name,
+            type="agent",
+            provenance_layer_url=settings.agentdna_chain_url,
+            api_key=settings.agentdna_api_key
         )
 
         policy_content = policy_path.read_text(encoding="utf-8")
         
         try:
             
-            agent_id = admin.deploy_agent_nft(
+            agent_id = admin.create_agent_card(
                 agent,
-                policy_content=policy_content,
+                policy_file=policy_path,
             )
-            agent_did = agent.did
         except Exception as exc:
             shutil.rmtree(agent_dir, ignore_errors=True)
             return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
 
         # Pre compute NLI embeddings
         try:
-            await cbac.precompute_policy(agent_did)
+            await cbac.precompute_policy(agent_id, skip_compute=False)
         except Exception as exec:
             return False, f"Failed to precompute policy: {exec}", None, None
 
         agent_payload = {
-            "did": agent_did,
+            "id": agent_id,
             "agent_name": agent_name,
             "org_id": org_id,
             "deployer_did": creator_did,
@@ -131,10 +124,10 @@ async def create_agent(
                 True,
                 f"Agent '{agent_name}' created; DB persistence deferred and will reconcile on restart ({exc})",
                 agent_id,
-                agent_did,
+                agent_id,
             )
 
-        return True, f"Agent '{agent_name}' created successfully", agent_id, agent_did
+        return True, f"Agent '{agent_name}' created successfully", agent_id, agent_id
     except Exception as exc:
         shutil.rmtree(agent_dir, ignore_errors=True)
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
@@ -174,13 +167,13 @@ async def login(username: str, password: str) -> tuple[bool, str, str | None]:
     return True, "Login successful", token
 
 
-async def authorize_action(agent_id: str, action_intent: str, agent_envelope: dict) -> tuple[bool, str]:
-    provenance_layer = RubixTrustService(
-        alias="admin-server",
-        chain_url=settings.agentdna_chain_url,
-        api_key=settings.agentdna_api_key,
+async def authorize_action(agent_id: str, action_intent: str, agent_envelope: IntentWorkflow) -> tuple[bool, str]:
+    provenance_layer = Provenance(
+        name="admin-server",
+        provenance_url=settings.agentdna_chain_url,
+        api_key=settings.agentdna_api_key
     )
-    cbac = CBAC(provenance_layer)
+    cbac = CBAC(provenance=provenance_layer, cbac_url="")
     
     # Reject early if the agent (matched by did) isn't registered in our database,
     # before doing any CBAC / CoCA work.
@@ -190,49 +183,36 @@ async def authorize_action(agent_id: str, action_intent: str, agent_envelope: di
     except Exception as exc:
         return False, f"Error occurred while checking agent registration: {exc}"
 
-    host_block = agent_envelope.get("host", agent_envelope)
-    chain = AgentDNA._walk_chain(host_block)
+    # CoCA verification
+    from agentdna.verifier import verify_heavy
+
+    verify_heavy(provenance=provenance_layer, workflow=agent_envelope)
+    chain = unwrap_workflow(agent_envelope)
     if not chain:
         return False, "CoCA verification failed: no signed blocks found in envelope"
 
     root_intent = ""
     try:
-        root_intent = chain[-1]['envelope']['payload']['message']
+        root_intent = chain[-1].payload
     except Exception as exc:
         return False, f"Error occurred while extracting root intent from envelope: {exc}"
 
     if root_intent == "":
         return False, "CBAC verification failed: root intent is empty"
-
+    
+    """
+    CBAC Verification:
+      - Agent's intent to policy verification
+      - User's intent with Agent's intent verification
+    """
     try:
-        result = await cbac.verify_async(agent_id, action_intent, root_intent)
+        result = await cbac.verify_agent_app_interaction(agent_id, action_intent, root_intent)
     except Exception as exc:
         return False, f"CBAC verification failed: {exc}"
 
     cbac_decision = result.decision
     if cbac_decision not in ["allow", "deny"]:
         return False, f"Unexpected CBAC decision: {cbac_decision}"
-
-    # CoCA verification — walk the signed delegation chain (host -> ... -> root)
-    # and re-verify each layer's signature, proving *who* acted at every hop.
-    # We recompute the signatures rather than trusting the embedded
-    # `verification.signature_valid` flag carried in the envelope.
-    for block in chain:
-        signer_did = block.get("agent")
-        envelope = block.get("envelope")
-        signature = block.get("signature")
-        layer = block.get("name") or signer_did or "<unknown>"
-
-        if not (signer_did and signature and isinstance(envelope, dict)):
-            return False, f"CoCA verification failed: layer '{layer}' is missing agent/envelope/signature"
-
-        try:
-            signature_valid = provenance_layer.verify_envelope(signer_did, envelope, signature)
-        except Exception as exc:
-            return False, f"CoCA verification failed: error verifying layer '{layer}': {exc}"
-
-        if not signature_valid:
-            return False, f"CoCA verification failed: invalid signature for layer '{layer}' ({signer_did})"
 
     if cbac_decision == "allow":
         return True, result.reason or f"Action '{action_intent}' authorized for agent '{agent_id}'"
@@ -248,6 +228,7 @@ async def update_agent_policies(
     agent_dir = _agent_dir(org_id, agent_name)
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
     await _write_policy(policy, policy_path)
+    policy_content = policy_path.read_text(encoding="utf-8")
 
     try:
         admin_username = get_username_by_did(creator_did)
@@ -258,28 +239,25 @@ async def update_agent_policies(
             )
 
         admin = AgentDNA(
-            chain_url=settings.agentdna_chain_url,
-            alias=admin_username,
-            api_key=settings.agentdna_api_key,
-            kind="user",
-            enable_nft=False,
+            name=admin_username,
+            type="human",
+            provenance_layer_url=settings.agentdna_chain_url,
+            api_key=settings.agentdna_api_key
         )
         
-        policy_content = policy_path.read_text(encoding="utf-8")
-        admin.update_agent_policy(agent_id, policy_content)
+        admin.update_agent_policy_by_id(agent_id, policy_file=policy_path)
     except Exception as exc:
         return False, f"Failed to update policy with AgentDNA: {exc}"
 
     # Pre compute NLI embeddings
     try:
-        provenance_layer = RubixTrustService(
-        alias="admin-server",
-        chain_url=settings.agentdna_chain_url,
-        api_key=settings.agentdna_api_key,
+        provenance_layer = Provenance(
+            name="admin-server",
+            provenance_url=settings.agentdna_chain_url,
         )
 
-        cbac = CBAC(provenance_layer)
-        await cbac.precompute_policy(agent_id)
+        cbac = CBAC(provenance_layer, "")
+        await cbac.precompute_policy(agent_id, skip_compute=False)
     except Exception as exec:
         return False, f"Failed to precompute policy: {exec}"
 
