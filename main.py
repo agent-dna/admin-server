@@ -23,7 +23,9 @@ from services import (
     get_agent,
     login,
 )
-
+from agentdna.types import (
+    IntentWorkflow
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -79,8 +81,9 @@ async def register_admin_endpoint(payload: RegisterAdminRequest) -> AgentRespons
 @app.post("/agent-admin/v1/authorize-action", response_model=AuthorizeActionResponse)
 async def authorize_action_endpoint(
     payload: AuthorizeActionRequest,
-) -> AuthorizeActionResponse:
-    authorized, message = await authorize_action(payload.agent_id, payload.action_intent, payload.agent_envelope)
+) -> AuthorizeActionResponse:    
+    agent_envelope = IntentWorkflow(**payload.agent_envelope)
+    authorized, message = await authorize_action(payload.agent_id, payload.action_intent, agent_envelope)
     return AuthorizeActionResponse(authorized=authorized, message=message)
 
 
