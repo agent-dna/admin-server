@@ -96,7 +96,7 @@ async def create_agent(
         policy_content = policy_path.read_text(encoding="utf-8")
         
         try:
-            agent_id = admin.create_agent_card(
+            admin.create_agent_card(
                 agent,
                 policy_file=policy_path,
             )
@@ -106,12 +106,12 @@ async def create_agent(
 
         # Pre compute NLI embeddings
         try:
-            await cbac.precompute_policy(agent_id, skip_compute=False)
+            await cbac.precompute_policy(agent.get_actor_id(), skip_compute=False)
         except Exception as exec:
             return False, f"Failed to precompute policy: {exec}", None, None
 
         agent_payload = {
-            "id": agent_id,
+            "id": agent.get_actor_id(),
             "agent_name": agent_name,
             "org_id": org_id,
             "deployer_did": creator_did,
@@ -125,11 +125,11 @@ async def create_agent(
             return (
                 True,
                 f"Agent '{agent_name}' created; DB persistence deferred and will reconcile on restart ({exc})",
-                agent_id,
-                agent_id,
+                agent.get_actor_id(),
+                agent.get_actor_id(),
             )
 
-        return True, f"Agent '{agent_name}' created successfully", agent_id, agent_id
+        return True, f"Agent '{agent_name}' created successfully", agent.get_actor_id(), agent.get_actor_id()
     except Exception as exc:
         shutil.rmtree(agent_dir, ignore_errors=True)
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
