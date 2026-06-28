@@ -82,6 +82,7 @@ async def create_agent(
             type="human",
             provenance_layer_url=settings.agentdna_chain_url,
             api_key=settings.agentdna_api_key,
+            config_dir=settings.agentdna_config_dir
             skip_actor_id_registration=True
         )
 
@@ -90,6 +91,7 @@ async def create_agent(
             type="agent",
             provenance_layer_url=settings.agentdna_chain_url,
             api_key=settings.agentdna_api_key,
+            config_dir=settings.agentdna_config_dir
             skip_actor_id_registration=True
         )
 
@@ -243,6 +245,7 @@ async def update_agent_policies(
             type="human",
             provenance_layer_url=settings.agentdna_chain_url,
             api_key=settings.agentdna_api_key,
+            config_dir=settings.agentdna_config_dir
             skip_actor_id_registration=True
         )
         

@@ -18,5 +18,6 @@ class Settings:
         for o in os.getenv("CORS_ORIGINS", "*").split(",")
         if o.strip()
     ]
+    agentdna_config_dir: str = str(os.getenv("AGENTDNA_CONFIG_DIR", ""))
 
 settings = Settings()
