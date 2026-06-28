@@ -81,14 +81,16 @@ async def create_agent(
             name=admin_username,
             type="human",
             provenance_layer_url=settings.agentdna_chain_url,
-            api_key=settings.agentdna_api_key
+            api_key=settings.agentdna_api_key,
+            config_dir=settings.agentdna_config_dir
         )
 
         agent = AgentDNA(
             name=agent_name,
             type="agent",
             provenance_layer_url=settings.agentdna_chain_url,
-            api_key=settings.agentdna_api_key
+            api_key=settings.agentdna_api_key,
+            config_dir=settings.agentdna_config_dir
         )
 
         policy_content = policy_path.read_text(encoding="utf-8")
@@ -240,7 +242,8 @@ async def update_agent_policies(
             name=admin_username,
             type="human",
             provenance_layer_url=settings.agentdna_chain_url,
-            api_key=settings.agentdna_api_key
+            api_key=settings.agentdna_api_key,
+            config_dir=settings.agentdna_config_dir
         )
         
         admin.update_agent_policy_by_id(agent_id, policy_file=policy_path)
