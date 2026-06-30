@@ -136,7 +136,6 @@ async def create_agent(
         shutil.rmtree(agent_dir, ignore_errors=True)
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
 
-# TODO: make email mandatory once API migration by other services are completed
 async def register_admin(username: str, org: str, password: str, email: str) -> tuple[bool, str]:
     client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
 
