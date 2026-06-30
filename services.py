@@ -123,6 +123,7 @@ async def create_agent(
         entry = journal("add_registered_agent", agent_payload)
         try:
             add_registered_agent(**agent_payload)
+            print(f"Agent {agent_payload['agent_name']} has been created")
             clear(entry)
         except Exception as exc:
             return (
