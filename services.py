@@ -136,8 +136,8 @@ async def create_agent(
         shutil.rmtree(agent_dir, ignore_errors=True)
         return False, f"Failed to register agent with AgentDNA: {exc}", None, None
 
-
-async def register_admin(username: str, org: str, password: str) -> tuple[bool, str]:
+# TODO: make email mandatory once API migration by other services are completed
+async def register_admin(username: str, org: str, password: str, email: str) -> tuple[bool, str]:
     client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
 
     try:
@@ -149,7 +149,7 @@ async def register_admin(username: str, org: str, password: str) -> tuple[bool, 
         return False, f"Failed to initialize signer: {exc}"
 
     try:
-        add_admin(signer.did, username, org, hash_password(password))
+        add_admin(signer.did, username, org, hash_password(password), email)
     except AdminConflictError as exc:
         return False, f"Admin registration conflict: {exc}"
 
