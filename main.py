@@ -161,64 +161,6 @@ async def authorize_action_endpoint(payload: AuthorizeActionRequest):
                 "message": str(exc),
             },
         )
-    try:
-        # Parse workflow
-        agent_envelope = IntentWorkflow(**payload.envelope)
-
-        # Perform authorization
-        authorized, message = await authorize_action(
-            payload.agent_id,
-            payload.action_intent,
-            agent_envelope,
-        )
-
-        # Authorization denied
-        if not authorized:
-            return PlainTextResponse(
-                content=message,
-                status_code=403,
-                headers={
-                    "X-CBAC-Decision": "deny",
-                },
-            )
-
-        # Forward request to application
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            upstream = await client.request(
-                method=payload.app_request.method,
-                url=payload.app_request.url,
-                headers=payload.app_request.headers,
-                content=payload.app_request.body,
-            )
-
-        # Return application's response unchanged
-        excluded_headers = {
-            "content-length",
-            "transfer-encoding",
-            "connection",
-        }
-
-        headers = {
-            k: v
-            for k, v in upstream.headers.items()
-            if k.lower() not in excluded_headers
-        }
-
-        return Response(
-            content=upstream.content,
-            status_code=upstream.status_code,
-            media_type=upstream.headers.get("content-type"),
-            headers=headers,
-        )
-
-    except Exception as exc:
-        return PlainTextResponse(
-            content=str(exc),
-            status_code=500,
-            headers={
-                "X-CBAC-Decision": "error",
-            },
-        )
 
 @app.post("/agent-admin/v1/login", response_model=AgentResponse)
 async def login_endpoint(payload: LoginRequest) -> AgentResponse:
