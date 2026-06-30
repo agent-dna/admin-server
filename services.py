@@ -120,10 +120,11 @@ async def create_agent(
             "deployer_did": creator_did,
             "policy": policy_content,
         }
-        entry = journal("add_registered_agent", agent_payload)
+        # entry = journal("add_registered_agent", agent_payload)
         try:
             add_registered_agent(**agent_payload)
-            clear(entry)
+            print(f"Agent {agent_payload['agent_name']} has been created")
+            # clear(entry)
         except Exception as exc:
             return (
                 True,
