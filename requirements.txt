@@ -8,3 +8,4 @@ bcrypt==4.2.1
 PyJWT==2.10.1
 rubix-py==1.1.1
 agent-dna @ git+https://github.com/rubixchain/agentdna.git@arnab/beta-refactor
+sentence_transformers==5.6.0

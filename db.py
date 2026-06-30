@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE TABLE IF NOT EXISTS admin (
     did      TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
+    email    TEXT NOT NULL DEFAULT '',
     org      TEXT NOT NULL,
     password TEXT NOT NULL
 );
@@ -33,13 +34,20 @@ class AgentConflictError(Exception):
 class AdminConflictError(Exception):
     pass
 
+def migrate_db() -> None:
+    with pool.connection() as conn:
+        conn.execute("""
+            ALTER TABLE admin
+            ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+        """)
 
 def init_db() -> None:
     """Open the connection pool and ensure the schema exists. Call once at startup."""
     pool.open()
     with pool.connection() as conn:
         conn.execute(SCHEMA)
-
+    
+    migrate_db()
 
 def add_registered_agent(
     did: str,
@@ -62,13 +70,13 @@ def add_registered_agent(
         raise AgentConflictError(f"agent with did '{did}' is already registered") from exc
 
 
-def add_admin(did: str, username: str, org: str, password_hash: str) -> None:
+def add_admin(did: str, username: str, org: str, password_hash: str, email: str) -> None:
     """Persist an admin. Raises AdminConflictError if the did or username exists."""
     try:
         with pool.connection() as conn:
             conn.execute(
-                "INSERT INTO admin (did, username, org, password) VALUES (%s, %s, %s, %s)",
-                (did, username, org, password_hash),
+                "INSERT INTO admin (did, username, org, password, email) VALUES (%s, %s, %s, %s, %s)",
+                (did, username, org, password_hash, email),
             )
     except UniqueViolation as exc:
         raise AdminConflictError(
