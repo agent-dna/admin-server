@@ -50,7 +50,7 @@ def init_db() -> None:
     migrate_db()
 
 def add_registered_agent(
-    did: str,
+    id: str,
     agent_name: str,
     org_id: str,
     deployer_did: str,
@@ -64,10 +64,10 @@ def add_registered_agent(
                 INSERT INTO agents (did, agent_name, org_id, deployer_did, policy)
                 VALUES (%s, %s, %s, %s, %s)
                 """,
-                (did, agent_name, org_id, deployer_did, policy),
+                (id, agent_name, org_id, deployer_did, policy),
             )
     except UniqueViolation as exc:
-        raise AgentConflictError(f"agent with did '{did}' is already registered") from exc
+        raise AgentConflictError(f"agent with did '{id}' is already registered") from exc
 
 
 def add_admin(did: str, username: str, org: str, password_hash: str, email: str) -> None:
