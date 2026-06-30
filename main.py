@@ -56,12 +56,13 @@ async def create_agent_endpoint(
     creator_did: str = Form(...),
     org_id: str = Form(...),
     agent_name: str = Form(...),
+    agent_id: str = Form(...)
 ) -> CreateAgentResponse:
-    status, message, agent_id, agent_did = await create_agent(
-        policy, creator_did, org_id, agent_name
+    status, message, agent_id, agent_card_id = await create_agent(
+        policy, creator_did, org_id, agent_name, agent_id
     )
     response = CreateAgentResponse(
-        status=status, message=message, agent_id=agent_id, agent_did=agent_did
+        status=status, message=message, agent_id=agent_id, agent_card_id=agent_card_id
     )
     return response
 

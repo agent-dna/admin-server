@@ -21,8 +21,8 @@ class LoginRequest(BaseModel):
 class CreateAgentResponse(BaseModel):
     status: bool = Field(..., description="Whether the operation succeeded")
     message: str = Field(..., description="Human-readable result message")
-    agent_id: str | None = Field(None, description="On-chain NFT id for the deployed agent")
-    agent_did: str | None = Field(None, description="DID of the deployed agent")
+    agent_id: str = Field(..., description="Agent ID")
+    agent_card_id: str = Field(..., description="Agent Card ID")
 
 class AppRequest(BaseModel):
     url: str = Field(..., description="Target application endpoint URL")

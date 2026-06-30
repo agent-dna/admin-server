@@ -54,7 +54,8 @@ async def create_agent(
     creator_did: str,
     org_id: str,
     agent_name: str,
-) -> tuple[bool, str, str | None, str | None]:
+    agent_id: str
+) -> tuple[bool, str, str, str]:
     provenance_layer = Provenance(
         name="admin-server",
         provenance_url=settings.agentdna_chain_url,
@@ -74,8 +75,8 @@ async def create_agent(
             return (
                 False,
                 f"Admin '{creator_did}' is not registered locally. Try requesting registration of admin again.",
-                None,
-                None,
+                "",
+                "",
             )
 
         admin = AgentDNA(
@@ -87,34 +88,26 @@ async def create_agent(
             skip_actor_id_registration=True
         )
 
-        agent = AgentDNA(
-            name=agent_name,
-            type="agent",
-            provenance_layer_url=settings.agentdna_chain_url,
-            api_key=settings.agentdna_api_key,
-            config_dir=settings.agentdna_config_dir,
-            skip_actor_id_registration=True
-        )
-
         policy_content = policy_path.read_text(encoding="utf-8")
         
+        agent_card_id = ""
         try:
-            admin.create_agent_card(
-                agent,
+            agent_card_id = admin.create_agent_card_by_id(
+                agent_id,
                 policy_file=policy_path,
             )
         except Exception as exc:
             shutil.rmtree(agent_dir, ignore_errors=True)
-            return False, f"Failed to deploy agent with AgentDNA: {exc}", None, None
+            return False, f"Failed to deploy agent with AgentDNA: {exc}", "", ""
 
         # Pre compute NLI embeddings
         try:
-            await cbac.precompute_policy(agent.get_actor_id(), skip_compute=False)
+            await cbac.precompute_policy(agent_id, skip_compute=False)
         except Exception as exec:
-            return False, f"Failed to precompute policy: {exec}", None, None
+            return False, f"Failed to precompute policy: {exec}", "", ""
 
         agent_payload = {
-            "id": agent.get_actor_id(),
+            "id": agent_id,
             "agent_name": agent_name,
             "org_id": org_id,
             "deployer_did": creator_did,
@@ -129,14 +122,14 @@ async def create_agent(
             return (
                 True,
                 f"Agent '{agent_name}' created; DB persistence deferred and will reconcile on restart ({exc})",
-                agent.get_actor_id(),
-                agent.get_actor_id(),
+                agent_id,
+                agent_card_id,
             )
 
-        return True, f"Agent '{agent_name}' created successfully", agent.get_actor_id(), agent.get_actor_id()
+        return True, f"Agent '{agent_name}' created successfully", agent_id, agent_card_id
     except Exception as exc:
         shutil.rmtree(agent_dir, ignore_errors=True)
-        return False, f"Failed to register agent with AgentDNA: {exc}", None, None
+        return False, f"Failed to register agent with AgentDNA: {exc}", "", ""
 
 async def register_admin(username: str, org: str, password: str, email: str) -> tuple[bool, str]:
     client = RubixClient(node_url=settings.agentdna_chain_url, timeout=300)
