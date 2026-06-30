@@ -59,6 +59,7 @@ async def create_agent(
         name="admin-server",
         provenance_url=settings.agentdna_chain_url,
         api_key=settings.agentdna_api_key,
+        config_path=settings.agentdna_config_dir
     )
     cbac = CBAC(provenance_layer, "")
 
@@ -174,7 +175,8 @@ async def authorize_action(agent_id: str, action_intent: str, intent_workflow: I
     provenance_layer = Provenance(
         name="admin-server",
         provenance_url=settings.agentdna_chain_url,
-        api_key=settings.agentdna_api_key
+        api_key=settings.agentdna_api_key,
+        config_path=settings.agentdna_config_dir
     )
     cbac = CBAC(provenance=provenance_layer, cbac_url="")
     
@@ -257,6 +259,7 @@ async def update_agent_policies(
         provenance_layer = Provenance(
             name="admin-server",
             provenance_url=settings.agentdna_chain_url,
+            config_path=settings.agentdna_config_dir
         )
 
         cbac = CBAC(provenance_layer, "")
