@@ -69,7 +69,8 @@ Compose reads `AGENTDNA_API_KEY` / `AGENTDNA_CHAIN_URL` / `JWT_SECRET` etc. from
 
 ## Endpoints
 
-All endpoints are under `/agent-admin/v1`. Several share a common response envelope, `AgentResponse`:
+Most endpoints are under `/agent-admin/v1`; the dashboard password endpoint is
+under `/dashboard/v1`. Several share a common response envelope, `AgentResponse`:
 
 - `status` (bool): whether the operation succeeded
 - `message` (string): human-readable result
@@ -141,6 +142,35 @@ Sample failure:
   "data": null
 }
 ```
+
+### POST `/dashboard/v1/admin-change-password`
+
+Changes an admin's password after verifying the current password. Unknown
+usernames and incorrect current passwords return the same response so the
+endpoint does not reveal whether an account exists.
+
+Request type: `application/json`
+
+```json
+{
+  "username": "admin-user",
+  "currentPassword": "current-password",
+  "newPassword": "new-password"
+}
+```
+
+The new password must contain at least 8 characters and must differ from the
+current password. Success returns HTTP 200:
+
+```json
+{
+  "status": true,
+  "message": "Password updated successfully."
+}
+```
+
+Credential failures return HTTP 401 with `Incorrect credentials`. Password
+policy failures return HTTP 400 with the applicable message.
 
 ### POST `/create-agent`
 

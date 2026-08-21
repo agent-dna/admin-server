@@ -18,6 +18,25 @@ class LoginRequest(BaseModel):
     password: str = Field(..., description="Admin password")
 
 
+class AdminChangePasswordRequest(BaseModel):
+    username: str = Field(..., description="Admin username")
+    current_password: str = Field(
+        ...,
+        alias="currentPassword",
+        description="Admin's current password",
+    )
+    new_password: str = Field(
+        ...,
+        alias="newPassword",
+        description="Admin's new password",
+    )
+
+
+class AdminChangePasswordResponse(BaseModel):
+    status: bool = Field(..., description="Whether the password was updated")
+    message: str = Field(..., description="Human-readable result message")
+
+
 class CreateAgentResponse(BaseModel):
     status: bool = Field(..., description="Whether the operation succeeded")
     message: str = Field(..., description="Human-readable result message")

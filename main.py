@@ -16,6 +16,8 @@ from schemas import (
     CreateAgentResponse,
     RegisterAdminRequest,
     LoginRequest,
+    AdminChangePasswordRequest,
+    AdminChangePasswordResponse,
     AppRequest
 )
 from services import (
@@ -26,6 +28,7 @@ from services import (
     list_agents,
     get_agent,
     login,
+    change_admin_password,
 )
 from agentdna.types import (
     IntentWorkflow
@@ -167,6 +170,29 @@ async def authorize_action_endpoint(payload: AuthorizeActionRequest):
 async def login_endpoint(payload: LoginRequest) -> AgentResponse:
     status, message, token = await login(payload.username, payload.password)
     return AgentResponse(status=status, message=message, data=token)
+
+
+@app.post(
+    "/dashboard/v1/admin-change-password",
+    response_model=AdminChangePasswordResponse,
+    responses={
+        400: {"model": AdminChangePasswordResponse},
+        401: {"model": AdminChangePasswordResponse},
+        500: {"model": AdminChangePasswordResponse},
+    },
+)
+async def admin_change_password_endpoint(
+    payload: AdminChangePasswordRequest,
+) -> JSONResponse:
+    status, message, status_code = await change_admin_password(
+        payload.username,
+        payload.current_password,
+        payload.new_password,
+    )
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": status, "message": message},
+    )
 
 
 @app.post("/agent-admin/v1/update-agent-policies", response_model=AgentResponse)

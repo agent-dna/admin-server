@@ -1,3 +1,4 @@
+import logging
 import shutil
 from pathlib import Path
 from uuid import uuid4
@@ -18,6 +19,7 @@ from db import (
     add_registered_agent,
     get_username_by_did,
     get_admin_by_username,
+    update_admin_password,
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
@@ -27,7 +29,10 @@ from recovery import journal, clear
 from security import hash_password, verify_password, create_access_token
 from config import settings
 
+logger = logging.getLogger(__name__)
+
 POLICY_STORE = Path(__file__).parent / "policy_store"
+MIN_PASSWORD_LENGTH = 8
 
 
 def _agent_dir(org_id: str, agent_name: str) -> Path:
@@ -163,6 +168,46 @@ async def login(username: str, password: str) -> tuple[bool, str, str | None]:
 
     token = create_access_token(username, did=admin["did"], org_id=admin["org"])
     return True, "Login successful", token
+
+
+async def change_admin_password(
+    username: str,
+    current_password: str,
+    new_password: str,
+) -> tuple[bool, str, int]:
+    try:
+        admin = get_admin_by_username(username)
+    except Exception:
+        logger.exception("Failed to load admin credentials for password change")
+        return False, "Unable to update password.", 500
+
+    if admin is None or not verify_password(current_password, admin["password"]):
+        return False, "Incorrect credentials", 401
+
+    if verify_password(new_password, admin["password"]):
+        return False, "New password must differ from the current one.", 400
+
+    if len(new_password) < MIN_PASSWORD_LENGTH:
+        return (
+            False,
+            f"Password must be at least {MIN_PASSWORD_LENGTH} characters.",
+            400,
+        )
+
+    try:
+        updated = update_admin_password(
+            username,
+            admin["password"],
+            hash_password(new_password),
+        )
+    except Exception:
+        logger.exception("Failed to persist admin password change")
+        return False, "Unable to update password.", 500
+
+    if not updated:
+        return False, "Incorrect credentials", 401
+
+    return True, "Password updated successfully.", 200
 
 
 async def authorize_action(agent_id: str, action_intent: str, intent_workflow: IntentWorkflow) -> tuple[bool, str]:

@@ -115,6 +115,25 @@ def get_admin_by_username(username: str) -> dict[str, str] | None:
         return None
     return {"did": row[0], "org": row[1], "password": row[2]}
 
+
+def update_admin_password(
+    username: str,
+    current_password_hash: str,
+    new_password_hash: str,
+) -> bool:
+    """Replace the expected password hash, returning whether a row was updated."""
+    with pool.connection() as conn:
+        cur = conn.execute(
+            """
+            UPDATE admin
+            SET password = %s
+            WHERE username = %s AND password = %s
+            """,
+            (new_password_hash, username, current_password_hash),
+        )
+    return cur.rowcount > 0
+
+
 def get_all_agents() -> list[dict[str, str]]:
     """Return all registered agents (without policy — see get_agent_by_did for that)."""
     with pool.connection() as conn:
