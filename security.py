@@ -23,6 +23,17 @@ def hash_password(password: str) -> str:
     return hashed.decode("utf-8")
 
 
+def verify_password(password: str, password_hash: str) -> bool:
+    """Return True if the plaintext password matches the stored bcrypt hash.
+
+    Returns False (rather than raising) for malformed/empty stored hashes.
+    """
+    try:
+        return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
+    except ValueError:
+        return False
+
+
 def create_access_token(subject: str, *, did: str, org_id: str) -> str:
     """Create a signed JWT for the given subject (admin username).
 
