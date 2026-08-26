@@ -21,6 +21,8 @@ from db import (
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
+    set_agent_active,
+    update_admin_password,
     agent_exists,
 )
 from recovery import journal, clear
@@ -163,6 +165,38 @@ async def login(username: str, password: str) -> tuple[bool, str, str | None]:
 
     token = create_access_token(username, did=admin["did"], org_id=admin["org"])
     return True, "Login successful", token
+
+
+async def update_password(username: str, new_password: str) -> tuple[bool, str]:
+    try:
+        admin = get_admin_by_username(username)
+    except Exception as exc:
+        return False, f"Error occurred while updating password: {exc}"
+
+    if admin is None:
+        return False, f"No admin found with username '{username}'"
+
+    try:
+        updated = update_admin_password(username, hash_password(new_password))
+    except Exception as exc:
+        return False, f"Failed to update password: {exc}"
+
+    if not updated:
+        return False, f"No admin found with username '{username}'"
+
+    return True, "Password updated successfully"
+
+
+async def revoke_agent(agent_id: str) -> tuple[bool, str]:
+    try:
+        revoked = set_agent_active(agent_id, False)
+    except Exception as exc:
+        return False, f"Failed to revoke agent: {exc}"
+
+    if not revoked:
+        return False, f"No agent found with did '{agent_id}'"
+
+    return True, f"Agent '{agent_id}' revoked successfully"
 
 
 async def authorize_action(agent_id: str, action_intent: str, intent_workflow: IntentWorkflow) -> tuple[bool, str]:

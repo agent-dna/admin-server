@@ -16,6 +16,8 @@ from schemas import (
     CreateAgentResponse,
     RegisterAdminRequest,
     LoginRequest,
+    UpdatePasswordRequest,
+    RevokeAgentRequest,
     AppRequest
 )
 from services import (
@@ -23,6 +25,8 @@ from services import (
     create_agent,
     register_admin,
     update_agent_policies,
+    update_password,
+    revoke_agent,
     list_agents,
     get_agent,
     login,
@@ -167,6 +171,20 @@ async def authorize_action_endpoint(payload: AuthorizeActionRequest):
 async def login_endpoint(payload: LoginRequest) -> AgentResponse:
     status, message, token = await login(payload.username, payload.password)
     return AgentResponse(status=status, message=message, data=token)
+
+
+@app.post("/agent-admin/v1/update-password", response_model=AgentResponse)
+async def update_password_endpoint(payload: UpdatePasswordRequest) -> AgentResponse:
+    status, message = await update_password(
+        payload.username, payload.new_password
+    )
+    return AgentResponse(status=status, message=message, data=None)
+
+
+@app.post("/agent-admin/v1/revoke-agent", response_model=AgentResponse)
+async def revoke_agent_endpoint(payload: RevokeAgentRequest) -> AgentResponse:
+    status, message = await revoke_agent(payload.agent_id)
+    return AgentResponse(status=status, message=message, data=None)
 
 
 @app.post("/agent-admin/v1/update-agent-policies", response_model=AgentResponse)

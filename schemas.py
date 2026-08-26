@@ -18,6 +18,15 @@ class LoginRequest(BaseModel):
     password: str = Field(..., description="Admin password")
 
 
+class UpdatePasswordRequest(BaseModel):
+    username: str = Field(..., description="Admin username")
+    new_password: str = Field(..., description="New password to set (stored salted and hashed)")
+
+
+class RevokeAgentRequest(BaseModel):
+    agent_id: str = Field(..., description="On-chain DID of the agent to revoke")
+
+
 class CreateAgentResponse(BaseModel):
     status: bool = Field(..., description="Whether the operation succeeded")
     message: str = Field(..., description="Human-readable result message")

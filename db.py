@@ -14,8 +14,10 @@ CREATE TABLE IF NOT EXISTS agents (
     agent_name   TEXT NOT NULL,
     org_id       TEXT NOT NULL,
     deployer_did TEXT NOT NULL,
-    policy       TEXT NOT NULL
+    policy       TEXT NOT NULL,
+    is_active    BOOLEAN NOT NULL DEFAULT TRUE
 );
+
 
 CREATE TABLE IF NOT EXISTS admin (
     did      TEXT PRIMARY KEY,
@@ -39,6 +41,10 @@ def migrate_db() -> None:
         conn.execute("""
             ALTER TABLE admin
             ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT '';
+        """)
+        conn.execute("""
+            ALTER TABLE agents
+            ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
         """)
 
 def init_db() -> None:
@@ -119,7 +125,7 @@ def get_all_agents() -> list[dict[str, str]]:
     """Return all registered agents (without policy — see get_agent_by_did for that)."""
     with pool.connection() as conn:
         rows = conn.execute(
-            "SELECT did, agent_name, org_id, deployer_did FROM agents"
+            "SELECT did, agent_name, org_id, deployer_did, is_active FROM agents"
         ).fetchall()
     return [
         {
@@ -127,6 +133,7 @@ def get_all_agents() -> list[dict[str, str]]:
             "agent_name": row[1],
             "org_id": row[2],
             "deployer_did": row[3],
+            "is_active": row[4],
         }
         for row in rows
     ]
@@ -136,7 +143,7 @@ def get_agent_by_did(did: str) -> dict[str, str] | None:
     """Return a single agent's full record (including policy), or None if unknown."""
     with pool.connection() as conn:
         row = conn.execute(
-            "SELECT did, agent_name, org_id, deployer_did, policy FROM agents WHERE did = %s",
+            "SELECT did, agent_name, org_id, deployer_did, policy, is_active FROM agents WHERE did = %s",
             (did,),
         ).fetchone()
     if row is None:
@@ -147,6 +154,7 @@ def get_agent_by_did(did: str) -> dict[str, str] | None:
         "org_id": row[2],
         "deployer_did": row[3],
         "policy": row[4],
+        "is_active": row[5],
     }
 
 
@@ -171,3 +179,29 @@ def agent_exists(did: str) -> bool:
             (did,),
         ).fetchone()
     return row is not None
+
+
+def set_agent_active(did: str, is_active: bool) -> bool:
+    """Set an agent's is_active flag, matched by did.
+
+    Returns True if a row was updated, False if no matching agent exists.
+    """
+    with pool.connection() as conn:
+        cur = conn.execute(
+            "UPDATE agents SET is_active = %s WHERE did = %s",
+            (is_active, did),
+        )
+    return cur.rowcount > 0
+
+
+def update_admin_password(username: str, password_hash: str) -> bool:
+    """Update an admin's stored password hash, matched by username.
+
+    Returns True if a row was updated, False if no matching admin exists.
+    """
+    with pool.connection() as conn:
+        cur = conn.execute(
+            "UPDATE admin SET password = %s WHERE username = %s",
+            (password_hash, username),
+        )
+    return cur.rowcount > 0
