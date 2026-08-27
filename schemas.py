@@ -33,24 +33,4 @@ class CreateAgentResponse(BaseModel):
     agent_id: str = Field(..., description="Agent ID")
     agent_card_id: str = Field(..., description="Agent Card ID")
 
-class AppRequest(BaseModel):
-    url: str = Field(..., description="Target application endpoint URL")
-    method: str = Field(..., description="HTTP method to invoke")
-    headers: dict[str, str] = Field(
-        default_factory=dict,
-        description="HTTP headers to include in the forwarded request",
-    )
-    body: str = Field(
-        default="",
-        description="HTTP request body to forward to the application",
-    )
 
-class AuthorizeActionRequest(BaseModel):
-    agent_id: str = Field(..., description="On-chain NFT id of the calling agent")
-    action_intent: str = Field(..., description="Intent the agent wants to perform")
-    envelope: dict = Field(..., description="Signed delegation chain for CoCA verification")
-    app_request: AppRequest = Field(..., description="HTTP request that will be authorized and forwarded to the target application if approval is granted")
-
-class AuthorizeActionResponse(BaseModel):
-    authorized: bool = Field(..., description="Whether the action is authorized for the agent")
-    message: str = Field(..., description="Human-readable rationale for the decision")
