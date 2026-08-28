@@ -3,25 +3,19 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Response
-from fastapi.responses import JSONResponse
 
 from config import settings
 from db import init_db, pool
 from recovery import replay
 from schemas import (
     AgentResponse,
-    AuthorizeActionRequest,
-    AuthorizeActionResponse,
     CreateAgentResponse,
     RegisterAdminRequest,
     LoginRequest,
     UpdatePasswordRequest,
     RevokeAgentRequest,
-    AppRequest
 )
 from services import (
-    authorize_action,
     create_agent,
     register_admin,
     update_agent_policies,
@@ -30,10 +24,9 @@ from services import (
     list_agents,
     get_agent,
     login,
+    agent_whitelist
 )
-from agentdna.types import (
-    IntentWorkflow
-)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -87,85 +80,6 @@ async def register_admin_endpoint(payload: RegisterAdminRequest) -> AgentRespons
     status, message = await register_admin(payload.username, payload.org, payload.password, payload.email)
     return AgentResponse(status=status, message=message, data=None)
 
-async def forward_to_app(
-    app: AppRequest,
-) -> tuple[int, httpx.Headers, bytes]:
-    method = app.method or "POST"
-
-    try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            resp = await client.request(
-                method=method,
-                url=app.url,
-                headers=app.headers,
-                content=app.body or "",
-            )
-    except httpx.RequestError as exc:
-        raise RuntimeError(f"forward_to_app: {exc}") from exc
-
-    return (
-        resp.status_code,
-        resp.headers,
-        resp.content,
-    )
-
-def relay_headers(response: Response, headers: httpx.Headers) -> None:
-    hop_by_hop_headers = {
-        "connection",
-        "keep-alive",
-        "proxy-authenticate",
-        "proxy-authorization",
-        "te",
-        "trailer",
-        "transfer-encoding",
-        "upgrade",
-        "content-length",
-    }
-    for key, value in headers.items():
-        if key.lower() not in hop_by_hop_headers:
-            response.headers[key] = value
-
-@app.post("/agent-admin/v1/authorize-action")
-async def authorize_action_endpoint(payload: AuthorizeActionRequest):
-    try:
-        agent_envelope = IntentWorkflow(**payload.envelope)
-
-        authorized, message = await authorize_action(
-            payload.agent_id,
-            payload.action_intent,
-            agent_envelope,
-        )
-
-        if not authorized:
-            return JSONResponse(
-                status_code=403,
-                headers={"X-CBAC-Decision": "deny"},
-                content={
-                    "status": False,
-                    "message": message,
-                },
-            )
-
-        status_code, headers, body = await forward_to_app(payload.app_request)
-
-        response = Response(
-            content=body,
-            status_code=status_code,
-        )
-
-        relay_headers(response, headers)
-
-        return response
-
-    except Exception as exc:
-        return JSONResponse(
-            status_code=502,
-            headers={"X-CBAC-Decision": "error"},
-            content={
-                "status": False,
-                "message": str(exc),
-            },
-        )
 
 @app.post("/agent-admin/v1/login", response_model=AgentResponse)
 async def login_endpoint(payload: LoginRequest) -> AgentResponse:
@@ -199,6 +113,12 @@ async def update_agent_policies_endpoint(
         policy, creator_did, org_id, agent_name, agent_id
     )
     return AgentResponse(status=status, message=message, data=None)
+
+
+@app.get("/agent-admin/v1/whitelist/{did}", response_model=AgentResponse)
+async def check_agent_whitelist(did: str) -> AgentResponse:
+    status, message, is_whitelisted = await agent_whitelist(did)
+    return AgentResponse(status=status, message=message, data=is_whitelisted)
 
 
 if __name__ == "__main__":
