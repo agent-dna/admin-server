@@ -33,4 +33,3 @@ class CreateAgentResponse(BaseModel):
     agent_id: str = Field(..., description="Agent ID")
     agent_card_id: str = Field(..., description="Agent Card ID")
 
-

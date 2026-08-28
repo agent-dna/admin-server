@@ -3,8 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Response
-from fastapi.responses import JSONResponse
 
 from config import settings
 from db import init_db, pool
@@ -26,10 +24,9 @@ from services import (
     list_agents,
     get_agent,
     login,
+    agent_whitelist
 )
-from agentdna.types import (
-    IntentWorkflow
-)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -116,6 +113,12 @@ async def update_agent_policies_endpoint(
         policy, creator_did, org_id, agent_name, agent_id
     )
     return AgentResponse(status=status, message=message, data=None)
+
+
+@app.get("/agent-admin/v1/whitelist/{did}", response_model=AgentResponse)
+async def check_agent_whitelist(did: str) -> AgentResponse:
+    status, message, is_whitelisted = await agent_whitelist(did)
+    return AgentResponse(status=status, message=message, data=is_whitelisted)
 
 
 if __name__ == "__main__":

@@ -362,6 +362,55 @@
           "body": "{\n  \"status\": false,\n  \"message\": \"Failed to update policy with AgentDNA: <error details>\",\n  \"data\": null\n}"
         }
       ]
+    },
+    {
+      "name": "Check Agent Whitelist",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/whitelist/{{did}}",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "whitelist", "{{did}}"]
+        },
+        "description": "Fetches a single agent by its DID, including the full policy text. Set the `did` collection variable to the agent's DID."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/whitelist/{{did}}",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "whitelist", "{{did}}"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Agent retrieved\",\n  \"data\": {\n    \"did\": \"<agent-did>\",\n    \"agent_name\": \"agent-a\",\n    \"org_id\": \"org-1\",\n    \"deployer_did\": \"<admin-did>\",\n    \"policy\": \"<full policy text>\"\n  }\n}"
+        },
+        {
+          "name": "Not Found",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/whitelist/{{did}}",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "whitelist", "{{did}}"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"No agent found with did '<agent-did>'\",\n  \"data\": null\n}"
+        }
+      ]
     }
   ]
 }

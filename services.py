@@ -6,8 +6,6 @@ from fastapi import UploadFile
 from agentdna.core import AgentDNA
 from rubix.signer import Signer
 from rubix.client import RubixClient
-from agentdna.provenance import Provenance
-
 
 from db import (
     AdminConflictError,
@@ -20,6 +18,7 @@ from db import (
     set_agent_policy,
     set_agent_active,
     update_admin_password,
+    is_agent_whitelisted
 )
 from recovery import journal, clear
 from security import hash_password, verify_password, create_access_token
@@ -54,13 +53,6 @@ async def create_agent(
     agent_name: str,
     agent_id: str
 ) -> tuple[bool, str, str, str]:
-    provenance_layer = Provenance(
-        name="admin-server",
-        provenance_url=settings.agentdna_chain_url,
-        api_key=settings.agentdna_api_key,
-        config_path=settings.agentdna_config_dir
-    )
-
     agent_dir = _agent_dir(org_id, agent_name)
     policy_path = agent_dir / _suffixed_policy_name(policy.filename)
     await _write_policy(policy, policy_path)
@@ -264,3 +256,11 @@ async def get_agent(did: str) -> tuple[bool, str, dict[str, str] | None]:
     if agent is None:
         return False, f"No agent found with did '{did}'", None
     return True, "Agent retrieved", agent
+
+
+async def agent_whitelist(agent_id: str) -> tuple[bool, str, bool]:
+    try:
+        is_whitelisted = is_agent_whitelisted(agent_id)
+    except Exception as exc:
+        return False, f"Failed to fetch agent {agent_id} : {exc}", False
+    return True, f"Agent {agent_id} whitelist status retrieved", is_whitelisted

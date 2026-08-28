@@ -157,6 +157,16 @@ def get_agent_by_did(did: str) -> dict[str, str] | None:
         "is_active": row[5],
     }
 
+def is_agent_whitelisted(did: str) -> bool:
+    """Return True if the agent is whitelisted (is_active), False otherwise."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT is_active FROM agents WHERE did = %s",
+            (did,),
+        ).fetchone()
+    if row is None:
+        return False
+    return row[0]
 
 def set_agent_policy(org_id: str, agent_name: str, policy: str) -> bool:
     """Update an agent's stored policy, matched by (org_id, agent_name).
