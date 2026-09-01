@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 from fastapi import UploadFile
 from agentdna.core import AgentDNA
 from rubix.signer import Signer
@@ -44,6 +45,24 @@ async def _write_policy(policy: UploadFile, target: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     contents = await policy.read()
     target.write_bytes(contents)
+
+
+async def _precompute_cbac_policy(agent_id: str, policy_content: str) -> tuple[bool, str]:
+    url = f"{settings.cbac_url}/cbac/v1/policies/precompute"
+    try:
+        async with httpx.AsyncClient(timeout=100) as client:
+            response = await client.post(
+                url, json={"agent_id": agent_id, "policy": policy_content}
+            )
+            response.raise_for_status()
+            body = response.json()
+    except Exception as exc:
+        return False, f"Failed to reach CBAC server: {exc}"
+
+    if not body.get("success"):
+        return False, body.get("message", "CBAC policy precompute failed")
+
+    return True, body.get("message", "CBAC policy precompute succeeded")
 
 
 async def create_agent(
@@ -108,6 +127,11 @@ async def create_agent(
                 agent_id,
                 agent_card_id,
             )
+
+        if settings.is_cbac_enabled:
+            cbac_ok, cbac_message = await _precompute_cbac_policy(agent_id, policy_content)
+            if not cbac_ok:
+                return False, f"CBAC policy precompute failed: {cbac_message}", agent_id, agent_card_id
 
         return True, f"Agent '{agent_name}' created successfully", agent_id, agent_card_id
     except Exception as exc:
@@ -237,6 +261,11 @@ async def update_agent_policies(
             True,
             f"Policy for agent '{agent_name}' updated on-chain, but no matching DB record was found to update",
         )
+
+    if settings.is_cbac_enabled:
+        cbac_ok, cbac_message = await _precompute_cbac_policy(agent_id, policy_content)
+        if not cbac_ok:
+            return False, f"CBAC policy precompute failed: {cbac_message}"
 
     return True, f"Policy for agent '{agent_name}' updated successfully"
 

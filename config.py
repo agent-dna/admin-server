@@ -19,5 +19,7 @@ class Settings:
         if o.strip()
     ]
     agentdna_config_dir: str = str(os.getenv("AGENTDNA_CONFIG_DIR", ""))
+    is_cbac_enabled: bool = os.getenv("IS_CBAC_ENABLED", "false").strip().lower() in ("1", "true", "yes")
+    cbac_url: str = os.getenv("CBAC_URL", "").rstrip("/")
 
 settings = Settings()
