@@ -21,3 +21,6 @@ dependencies = [
     "rubix-py>=1.2.0",
     "agent-dna>=0.5.0",
 ]
+
+[tool.setuptools.packages.find]
+exclude = ["postman", "policy_store"]
