@@ -191,7 +191,7 @@ def agent_exists(did: str) -> bool:
     return row is not None
 
 
-def set_agent_active(did: str, is_active: bool) -> bool:
+def set_agent_active_status(did: str, is_active: bool) -> bool:
     """Set an agent's is_active flag, matched by did.
 
     Returns True if a row was updated, False if no matching agent exists.
