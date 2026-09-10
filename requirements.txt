@@ -8,4 +8,4 @@ psycopg[binary,pool]==3.2.3
 bcrypt==4.2.1
 PyJWT==2.10.1
 rubix-py>=1.2.0
-agent-dna @ git+https://github.com/rubixchain/agentdna.git@develop
+agent-dna>=0.5.0
