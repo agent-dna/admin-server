@@ -14,6 +14,7 @@ from schemas import (
     LoginRequest,
     UpdatePasswordRequest,
     RevokeAgentRequest,
+    WhitelistAgentRequest,
 )
 from services import (
     create_agent,
@@ -24,7 +25,8 @@ from services import (
     list_agents,
     get_agent,
     login,
-    agent_whitelist
+    agent_whitelist,
+    whitelist_agent
 )
 
 
@@ -98,6 +100,12 @@ async def update_password_endpoint(payload: UpdatePasswordRequest) -> AgentRespo
 @app.post("/agent-admin/v1/revoke-agent", response_model=AgentResponse)
 async def revoke_agent_endpoint(payload: RevokeAgentRequest) -> AgentResponse:
     status, message = await revoke_agent(payload.agent_id)
+    return AgentResponse(status=status, message=message, data=None)
+
+
+@app.post("/agent-admin/v1/whitelist", response_model=AgentResponse)
+async def whitelist_agent_endpoint(payload: WhitelistAgentRequest) -> AgentResponse:
+    status, message = await whitelist_agent(payload.agent_id)
     return AgentResponse(status=status, message=message, data=None)
 
 

@@ -27,6 +27,10 @@ class RevokeAgentRequest(BaseModel):
     agent_id: str = Field(..., description="On-chain DID of the agent to revoke")
 
 
+class WhitelistAgentRequest(BaseModel):
+    agent_id: str = Field(..., description="On-chain DID of the agent to whitelist")
+
+
 class CreateAgentResponse(BaseModel):
     status: bool = Field(..., description="Whether the operation succeeded")
     message: str = Field(..., description="Human-readable result message")

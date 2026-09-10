@@ -17,7 +17,7 @@ from db import (
     get_all_agents,
     get_agent_by_did,
     set_agent_policy,
-    set_agent_active,
+    set_agent_active_status,
     update_admin_password,
     is_agent_whitelisted
 )
@@ -194,7 +194,7 @@ async def update_password(username: str, new_password: str) -> tuple[bool, str]:
 
 async def revoke_agent(agent_id: str) -> tuple[bool, str]:
     try:
-        revoked = set_agent_active(agent_id, False)
+        revoked = set_agent_active_status(agent_id, False)
     except Exception as exc:
         return False, f"Failed to revoke agent: {exc}"
 
@@ -202,6 +202,18 @@ async def revoke_agent(agent_id: str) -> tuple[bool, str]:
         return False, f"No agent found with did '{agent_id}'"
 
     return True, f"Agent '{agent_id}' revoked successfully"
+
+
+async def whitelist_agent(agent_id: str) -> tuple[bool, str]:
+    try:
+        whitelisted = set_agent_active_status(agent_id, True)
+    except Exception as exc:
+        return False, f"Failed to whitelist agent: {exc}"
+
+    if not whitelisted:
+        return False, f"No agent found with did '{agent_id}'"
+
+    return True, f"Agent '{agent_id}' whitelisted successfully"
 
 
 async def update_agent_policies(
