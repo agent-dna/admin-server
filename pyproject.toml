@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "admin-server"
+version = "0.0.0"
+description = "Admin service"
+requires-python = ">=3.10,<3.13"
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.35.0",
+    "python-multipart>=0.0.26",
+    "pydantic>=2.11.7,<3.0.0",
+    "python-dotenv>=1.1.0",
+    "httpx>=0.28.1",
+    "psycopg[binary,pool]==3.2.3",
+    "bcrypt==4.2.1",
+    "PyJWT==2.10.1",
+    "rubix-py>=1.2.0",
+    "agent-dna>=0.5.0",
+]
