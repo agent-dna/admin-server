@@ -231,11 +231,13 @@ def update_admin_password(username: str, password_hash: str) -> bool:
 
 
 def _register_user(email: str, api_key: str, user_id: str):
-    """Register a user and their first user ID.
+    """Register a user ID, creating the user on its first registration.
 
-    Returns the generated API key.
+    A user (email, api_key) can own several user IDs, so repeat calls with the
+    same email and api_key add another user ID to the existing user.
 
-    Raises ValueError if the email or user ID is already registered.
+    Raises ValueError if the email is registered with a different api_key,
+    the api_key belongs to another email, or the user ID is already registered.
     The user and user ID are created atomically.
     """
 
@@ -246,9 +248,19 @@ def _register_user(email: str, api_key: str, user_id: str):
                     """
                     INSERT INTO users (email, api_key)
                     VALUES (%s, %s)
+                    ON CONFLICT (email) DO NOTHING
                     """,
                     (email, api_key),
                 )
+
+                row = conn.execute(
+                    "SELECT api_key FROM users WHERE email = %s",
+                    (email,),
+                ).fetchone()
+                if row[0] != api_key:
+                    raise ValueError(
+                        "The email is already registered with a different API key"
+                    )
 
                 conn.execute(
                     """
@@ -260,7 +272,7 @@ def _register_user(email: str, api_key: str, user_id: str):
 
     except UniqueViolation as exc:
         raise ValueError(
-            "The email or user ID is already registered"
+            "The user ID is already registered, or the API key belongs to another email"
         ) from exc
 
 

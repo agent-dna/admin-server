@@ -314,7 +314,7 @@ async def agent_whitelist(agent_id: str) -> tuple[bool, str, bool]:
 
 async def register_user(user_id: str, email_id: str, api_key: str) -> tuple[bool, str]:
     try:
-        _register_user(user_id, email_id, api_key)
+        _register_user(email_id, api_key, user_id)
     except Exception as exc:
         return False, f"failed to register user (id: {user_id}): {exc}"
 
