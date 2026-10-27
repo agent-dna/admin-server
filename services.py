@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 from uuid import uuid4
+from typing import List, Any
 
 import httpx
 from fastapi import UploadFile
@@ -19,7 +20,11 @@ from db import (
     set_agent_policy,
     set_agent_active_status,
     update_admin_password,
-    is_agent_whitelisted
+    is_agent_whitelisted,
+    _register_user,
+    _set_user_active_status,
+    _get_user_active_status,
+    _get_all_users
 )
 from recovery import journal, clear
 from security import hash_password, verify_password, create_access_token
@@ -305,3 +310,44 @@ async def agent_whitelist(agent_id: str) -> tuple[bool, str, bool]:
     except Exception as exc:
         return False, f"Failed to fetch agent {agent_id} : {exc}", False
     return True, f"Agent {agent_id} whitelist status retrieved", is_whitelisted
+
+
+async def register_user(user_id: str, email_id: str, api_key: str) -> tuple[bool, str]:
+    try:
+        _register_user(user_id, email_id, api_key)
+    except Exception as exc:
+        return False, f"failed to register user (id: {user_id}): {exc}"
+
+    return True, f"user registered successfully"
+
+
+async def update_user_status(user_id: str, is_active: bool) -> tuple[bool, str, bool]:
+    try:
+        user_status = _set_user_active_status(user_id, is_active)
+    except Exception as exc:
+        return False, f"failed to set user status: {exc}", False
+
+    result_str = "blacklisted" if not is_active else "whitelisted" 
+
+    return True, f"user is {result_str} successfully", user_status
+
+
+async def get_user_status(user_id: str) -> tuple[bool, str, bool]:
+    try:
+        user_status = _get_user_active_status(user_id)
+    except Exception as exc:
+        return False, f"failed to get user status: {exc}", False
+
+    return True, "user status fetched successfully", user_status
+
+
+async def get_users() -> tuple[bool, List[Any], str]:
+    try:
+        users = _get_all_users()
+
+        if len(users) == 0:
+            return True, [], "no users found"
+
+        return True, users, "users fetched successfully"
+    except Exception as exc:
+        return False, [], f"error occured while fetching users: {exc}"
