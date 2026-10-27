@@ -1,3 +1,5 @@
+from typing import Any, List
+
 from psycopg.errors import UniqueViolation
 from psycopg_pool import ConnectionPool
 
@@ -25,6 +27,17 @@ CREATE TABLE IF NOT EXISTS admin (
     email    TEXT NOT NULL DEFAULT '',
     org      TEXT NOT NULL,
     password TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    email TEXT PRIMARY KEY,
+    api_key TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS user_id (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL REFERENCES users(email),
+    is_active BOOL NOT NULL DEFAULT TRUE
 );
 """
 
@@ -215,3 +228,83 @@ def update_admin_password(username: str, password_hash: str) -> bool:
             (password_hash, username),
         )
     return cur.rowcount > 0
+
+
+def _register_user(email: str, api_key: str, user_id: str):
+    """Register a user and their first user ID.
+
+    Returns the generated API key.
+
+    Raises ValueError if the email or user ID is already registered.
+    The user and user ID are created atomically.
+    """
+
+    try:
+        with pool.connection() as conn:
+            with conn.transaction():
+                conn.execute(
+                    """
+                    INSERT INTO users (email, api_key)
+                    VALUES (%s, %s)
+                    """,
+                    (email, api_key),
+                )
+
+                conn.execute(
+                    """
+                    INSERT INTO user_id (id, email)
+                    VALUES (%s, %s)
+                    """,
+                    (user_id, email),
+                )
+
+    except UniqueViolation as exc:
+        raise ValueError(
+            "The email or user ID is already registered"
+        ) from exc
+
+
+def _set_user_active_status(user_id: str, is_active: bool) -> bool:
+    """Update a user ID's active status.
+
+    Returns False if the user ID does not exist.
+    """
+    with pool.connection() as conn:
+        cur = conn.execute(
+            """
+            UPDATE user_id
+            SET is_active = %s
+            WHERE id = %s
+            """,
+            (is_active, user_id),
+        )
+
+    return cur.rowcount > 0
+
+
+def _get_user_active_status(user_id: str) -> bool:
+    """Return the active status, or None if the user ID is unknown."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            """
+            SELECT is_active
+            FROM user_id
+            WHERE id = %s
+            """,
+            (user_id,),
+        ).fetchone()
+
+    return row[0] if row else False
+
+def _get_all_users() -> List[Any]:
+    with pool.connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, is_active
+            FROM user_id
+            """
+        )
+        user_ids = [{"user_id": row[0], "is_active": row[1]} for row in rows.fetchall()]
+        print(user_ids)
+
+    return user_ids

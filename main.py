@@ -15,6 +15,9 @@ from schemas import (
     UpdatePasswordRequest,
     RevokeAgentRequest,
     WhitelistAgentRequest,
+    RegisterUserRequest, 
+    UpdateUserStatusRequest,
+    BaseResponse
 )
 from services import (
     create_agent,
@@ -26,7 +29,11 @@ from services import (
     get_agent,
     login,
     agent_whitelist,
-    whitelist_agent
+    whitelist_agent,
+    register_user,
+    update_user_status,
+    get_user_status,
+    get_users   
 )
 
 
@@ -127,6 +134,35 @@ async def update_agent_policies_endpoint(
 async def check_agent_whitelist(did: str) -> AgentResponse:
     status, message, is_whitelisted = await agent_whitelist(did)
     return AgentResponse(status=status, message=message, data=is_whitelisted)
+
+
+@app.post("/agent-admin/v1/users", response_model=BaseResponse)
+async def register_user_endpoint(payload: RegisterUserRequest) -> BaseResponse:
+    status, message =  await register_user(
+        payload.user_id,
+        payload.email,
+        payload.api_key
+    )
+
+    return BaseResponse(status=status, message=message, data=None)
+
+
+@app.patch("/agent-admin/v1/users/{user_id}/status", response_model=BaseResponse)
+async def update_user_status_endpoint(user_id: str, payload: UpdateUserStatusRequest) -> BaseResponse:
+    status, message, user_status = await update_user_status(user_id, payload.is_active)
+    return BaseResponse(status=status, message=message, data=user_status)
+
+
+@app.get("/agent-admin/v1/users/{user_id}/status", response_model=BaseResponse)
+async def get_user_status_endpoint(user_id: str):
+    status, message, user_status = await get_user_status(user_id)
+    return BaseResponse(status=status, message=message, data=user_status)
+
+
+@app.get("/agent-admin/v1/users", response_model=BaseResponse)
+async def get_users_endpoint():
+    status, users, message = await get_users()
+    return BaseResponse(status=status, message=message, data=users)
 
 
 if __name__ == "__main__":
