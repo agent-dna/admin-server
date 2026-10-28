@@ -101,7 +101,7 @@ Covers `POST /agent-admin/v1/tools/register` and `PATCH` / `GET /agent-admin/v1/
 | Test | Checks |
 |---|---|
 | `test_register_tool_stores_tool` | `add_tool` gets `(tool_id, tool_name)`; success message names the tool |
-| `test_register_tool_conflict` | A duplicate tool ID returns `status: false` with the reason |
+| `test_register_tool_conflict` | A conflict (tool ID registered with another name) returns `status: false` with the reason |
 | `test_register_tool_rejects_empty_field[tool_id\|tool_name]` | An empty ID or name is rejected with 422 |
 | `test_update_tool_status[True\|False]` | Sets the flag; message says whitelisted / blacklisted |
 | `test_update_tool_status_unknown_tool` | Unknown tool ID returns `status: false` |
@@ -156,7 +156,8 @@ Covers `POST /agent-admin/v1/whitelist/check`.
 | Test | Checks |
 |---|---|
 | `test_add_tool_stores_active_tool` | Stores the ID and name; new tools start active |
-| `test_add_tool_rejects_duplicate_id` | Raises `ToolConflictError` and leaves the existing tool unchanged |
+| `test_add_tool_ignores_same_id_and_name` | Re-registering the same ID and name is a no-op (a blacklisted tool stays blacklisted) |
+| `test_add_tool_rejects_same_id_with_new_name` | Raises `ToolConflictError` and leaves the existing tool unchanged |
 | `test_is_tool_whitelisted[active\|inactive\|unknown]` | `True` / `False` / `False` |
 | `test_set_tool_active_status` | Flips `is_active`; unknown tool ID → `False` |
 

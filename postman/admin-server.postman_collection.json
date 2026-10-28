@@ -475,7 +475,7 @@
             "raw": { "language": "json" }
           }
         },
-        "description": "Registers a tool by storing its ID (DID) and name in the `tools` table. New tools start whitelisted. An empty `tool_id` or `tool_name` is rejected with 422."
+        "description": "Registers a tool by storing its ID (DID) and name in the `tools` table. New tools start whitelisted. Idempotent: the same ID and name again is a no-op; the same ID with a different name fails. An empty `tool_id` or `tool_name` is rejected with 422."
       },
       "response": [
         {
@@ -524,7 +524,7 @@
           "code": 200,
           "_postman_previewlanguage": "json",
           "header": [{ "key": "Content-Type", "value": "application/json" }],
-          "body": "{\n  \"status\": false,\n  \"message\": \"failed to register tool (id: <tool-did>): tool with ID '<tool-did>' is already registered\",\n  \"data\": null\n}"
+          "body": "{\n  \"status\": false,\n  \"message\": \"failed to register tool (id: <tool-did>): tool with ID '<tool-did>' is already registered as 'web-search'\",\n  \"data\": null\n}"
         }
       ]
     },

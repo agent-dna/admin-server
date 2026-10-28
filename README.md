@@ -361,6 +361,8 @@ Response: `AgentResponse` with `data` set to the DIDs split into `whitelist` and
 
 Registers a tool by storing `(tool_id, tool_name)` in the `tools` table. New tools start whitelisted (`is_active` true).
 
+The call is idempotent: registering the same `(tool_id, tool_name)` again succeeds and changes nothing (a blacklisted tool stays blacklisted). Registering a known `tool_id` with a different name fails.
+
 Request type: `application/json`
 
 Request body:
@@ -378,12 +380,12 @@ Response: `BaseResponse` (same shape as `AgentResponse`), `data` is `null`.
 }
 ```
 
-If the tool ID is already registered:
+If the tool ID is already registered with a different name:
 
 ```json
 {
   "status": false,
-  "message": "failed to register tool (id: <tool-did>): tool with ID '<tool-did>' is already registered",
+  "message": "failed to register tool (id: <tool-did>): tool with ID '<tool-did>' is already registered as 'web-search'",
   "data": null
 }
 ```

@@ -18,7 +18,16 @@ def test_add_tool_stores_active_tool(test_pool):
     assert _rows(test_pool) == [(NEW_TOOL_ID, "new-tool", True)]
 
 
-def test_add_tool_rejects_duplicate_id(seed, test_pool):
+def test_add_tool_ignores_same_id_and_name(seed, test_pool):
+    # Re-registering is a no-op, so it doesn't re-whitelist a blacklisted tool either.
+    before = _rows(test_pool)
+
+    db.add_tool(seed.inactive_tool, seed.inactive_tool_name)
+
+    assert _rows(test_pool) == before
+
+
+def test_add_tool_rejects_same_id_with_new_name(seed, test_pool):
     before = _rows(test_pool)
 
     with pytest.raises(db.ToolConflictError):

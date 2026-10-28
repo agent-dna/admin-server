@@ -351,15 +351,27 @@ def _get_all_users() -> List[Any]:
 
 
 def add_tool(tool_id: str, tool_name: str) -> None:
-    """Persist a tool. Raises ToolConflictError if the tool ID exists."""
-    try:
-        with pool.connection() as conn:
-            conn.execute(
-                "INSERT INTO tools (tool_id, tool_name) VALUES (%s, %s)",
-                (tool_id, tool_name),
-            )
-    except UniqueViolation as exc:
-        raise ToolConflictError(f"tool with ID '{tool_id}' is already registered") from exc
+    """Register a tool.
+
+    Idempotent: registering the same (tool_id, tool_name) again does nothing.
+    Raises ToolConflictError if the tool ID is registered with a different name.
+    """
+    with pool.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO tools (tool_id, tool_name)
+            VALUES (%s, %s)
+            ON CONFLICT (tool_id) DO NOTHING
+            """,
+            (tool_id, tool_name),
+        )
+        row = conn.execute(
+            "SELECT tool_name FROM tools WHERE tool_id = %s",
+            (tool_id,),
+        ).fetchone()
+
+    if row[0] != tool_name:
+        raise ToolConflictError(f"tool with ID '{tool_id}' is already registered as '{row[0]}'")
 
 
 def is_tool_whitelisted(tool_id: str) -> bool:
