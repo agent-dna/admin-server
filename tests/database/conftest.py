@@ -55,8 +55,17 @@ def test_pool(postgres_url, monkeypatch):
 class SeedData:
     """Sample rows inserted by the `seed` fixture. DIDs are IPFS CIDv1 values."""
 
+    admin_did: str = "bafybeihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+    admin_username: str = "admin-user"
+    admin_org: str = "org-1"
+    admin_email: str = "admin@example.com"
+    admin_password_hash: str = "stored-password-hash"
+    # Both agents belong to admin_org, were deployed by admin_did and share agent_policy.
     active_agent: str = "bafybeie5nqv6kd3qnfjupgvz34woh3oksc3iau6abmyajn7qvtf6d2ho34"
+    active_agent_name: str = "active-agent"
     inactive_agent: str = "bafybeicg2rebjoofv4kbyovkw7af3rpiitvnl6i7ckcywaq6xjcxnc2mby"
+    inactive_agent_name: str = "inactive-agent"
+    agent_policy: str = "allow: read"
     user_email: str = "user@example.com"
     user_api_key: str = "user-api-key"
     active_user: str = "bafybeiasb5vpmaounyilfuxbd3lryvosl4yefqrfahsb2esg46q6tu6y5q"
@@ -75,12 +84,24 @@ def seed(test_pool) -> SeedData:
     data = SeedData()
     with test_pool.connection() as conn:
         conn.execute(
+            "INSERT INTO admin (did, username, org, password, email) VALUES (%s, %s, %s, %s, %s)",
+            (data.admin_did, data.admin_username, data.admin_org, data.admin_password_hash, data.admin_email),
+        )
+        conn.execute(
             """
             INSERT INTO agents (did, agent_name, org_id, deployer_did, policy, is_active)
-            VALUES (%s, 'active-agent', 'org-1', 'deployer', '', TRUE),
-                   (%s, 'inactive-agent', 'org-1', 'deployer', '', FALSE)
+            VALUES (%(active)s, %(active_name)s, %(org)s, %(deployer)s, %(policy)s, TRUE),
+                   (%(inactive)s, %(inactive_name)s, %(org)s, %(deployer)s, %(policy)s, FALSE)
             """,
-            (data.active_agent, data.inactive_agent),
+            {
+                "active": data.active_agent,
+                "active_name": data.active_agent_name,
+                "inactive": data.inactive_agent,
+                "inactive_name": data.inactive_agent_name,
+                "org": data.admin_org,
+                "deployer": data.admin_did,
+                "policy": data.agent_policy,
+            },
         )
         conn.execute(
             "INSERT INTO users (email, api_key) VALUES (%s, %s)",
