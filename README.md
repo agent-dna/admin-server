@@ -334,6 +334,37 @@ Sample failure (admin not registered):
 }
 ```
 
+### POST `/whitelist/check`
+
+Checks a batch of actor DIDs (agents or users) in one call. A DID is whitelisted if it is an active agent in `agents` or an active user DID in `user_id`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted.
+
+Request type: `application/json`
+
+Request body:
+
+- `dids` (string[]): DIDs to check. Must not be empty (422 otherwise).
+
+Response: `AgentResponse` with `data` set to the DIDs split into `whitelist` and `blacklist`.
+
+```json
+{
+  "status": true,
+  "message": "Whitelist status retrieved for 3 actors",
+  "data": {
+    "whitelist": ["<agent-did>", "<user-did>"],
+    "blacklist": ["<unknown-did>"]
+  }
+}
+```
+
+## Testing
+
+```bash
+uv run pytest
+```
+
+Docker must be running: DB tests start a throwaway Postgres container via [testcontainers](https://testcontainers.com/?language=python). The same suite runs in GitHub Actions on every pull request (`.github/workflows/tests.yml`). See [`tests/README.md`](tests/README.md) for the layout and what each test covers.
+
 ## Project structure
 
 - `main.py`: FastAPI app, lifespan (DB init + recovery replay), and route handlers
@@ -348,6 +379,7 @@ Sample failure (admin not registered):
 - `requirements.txt`: Python dependencies
 - `coca_envelope.json`: a sample CoCA delegation-chain envelope for `/authorize-action`
 - `postman/`: Postman collection and environment for trying the endpoints
+- `tests/`: pytest suite, split into `controllers/` (API endpoints, DB mocked) and `database/` (`db.py` queries against a testcontainers Postgres)
 
 ## Postman
 

@@ -181,6 +181,23 @@ def is_agent_whitelisted(did: str) -> bool:
         return False
     return row[0]
 
+
+def get_whitelisted_actors(dids: List[str]) -> set[str]:
+    """Return the subset of dids that are whitelisted (is_active), in one query.
+
+    Actors are agents and users, so both the agents and user_id tables are checked.
+    """
+    with pool.connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT did FROM agents WHERE did = ANY(%(dids)s) AND is_active
+            UNION
+            SELECT id FROM user_id WHERE id = ANY(%(dids)s) AND is_active
+            """,
+            {"dids": dids},
+        ).fetchall()
+    return {row[0] for row in rows}
+
 def set_agent_policy(org_id: str, agent_name: str, policy: str) -> bool:
     """Update an agent's stored policy, matched by (org_id, agent_name).
 

@@ -36,6 +36,10 @@ class WhitelistAgentRequest(BaseModel):
     agent_id: str = Field(..., description="On-chain DID of the agent to whitelist")
 
 
+class CheckWhitelistRequest(BaseModel):
+    dids: list[str] = Field(..., min_length=1, description="DIDs of the actors (agents or users) to check")
+
+
 class CreateAgentResponse(BaseModel):
     status: bool = Field(..., description="Whether the operation succeeded")
     message: str = Field(..., description="Human-readable result message")

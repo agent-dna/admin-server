@@ -24,3 +24,13 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 exclude = ["postman", "policy_store"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "testcontainers[postgres]>=4.15.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

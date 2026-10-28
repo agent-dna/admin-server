@@ -15,7 +15,8 @@ from schemas import (
     UpdatePasswordRequest,
     RevokeAgentRequest,
     WhitelistAgentRequest,
-    RegisterUserRequest, 
+    CheckWhitelistRequest,
+    RegisterUserRequest,
     UpdateUserStatusRequest,
     BaseResponse
 )
@@ -29,6 +30,7 @@ from services import (
     get_agent,
     login,
     agent_whitelist,
+    actors_whitelist,
     whitelist_agent,
     register_user,
     update_user_status,
@@ -134,6 +136,12 @@ async def update_agent_policies_endpoint(
 async def check_agent_whitelist(did: str) -> AgentResponse:
     status, message, is_whitelisted = await agent_whitelist(did)
     return AgentResponse(status=status, message=message, data=is_whitelisted)
+
+
+@app.post("/agent-admin/v1/whitelist/check", response_model=AgentResponse)
+async def check_actors_whitelist(payload: CheckWhitelistRequest) -> AgentResponse:
+    status, message, result = await actors_whitelist(payload.dids)
+    return AgentResponse(status=status, message=message, data=result)
 
 
 @app.post("/agent-admin/v1/users", response_model=BaseResponse)
