@@ -13,9 +13,17 @@ def test_is_agent_whitelisted(seed, did_field, expected):
     assert db.is_agent_whitelisted(getattr(seed, did_field)) is expected
 
 
-def test_get_whitelisted_actors_checks_agents_and_users(seed):
+def test_get_whitelisted_actors_checks_agents_users_and_tools(seed):
     result = db.get_whitelisted_actors(
-        [seed.active_agent, seed.inactive_agent, seed.active_user, seed.inactive_user, seed.unknown]
+        [
+            seed.active_agent,
+            seed.inactive_agent,
+            seed.active_user,
+            seed.inactive_user,
+            seed.active_tool,
+            seed.inactive_tool,
+            seed.unknown,
+        ]
     )
 
-    assert result == {seed.active_agent, seed.active_user}
+    assert result == {seed.active_agent, seed.active_user, seed.active_tool}

@@ -39,6 +39,7 @@ Test file names must be unique across folders.
 | `active_agent` / `inactive_agent` (+ `_name`) | Agents in `agents`, `is_active` true / false; both in `admin_org`, deployed by `admin_did`, with `agent_policy` |
 | `user_email`, `user_api_key` | One user in `users` |
 | `active_user` / `inactive_user` | That user's DIDs in `user_id`, `is_active` true / false |
+| `active_tool` / `inactive_tool` (+ `_name`) | Tools in `tools`, `is_active` true / false |
 | `unknown` | A DID that isn't in any table |
 
 Add to `SeedData` and the `seed` fixture when a new test needs more rows, rather than inserting rows inside the test.
@@ -46,8 +47,7 @@ Add to `SeedData` and the `seed` fixture when a new test needs more rows, rather
 ## Tests
 
 We test behaviour that could realistically break, not every line. One test per behaviour.
-Each controller file also has a parametrized `test_db_error_returns_failed_status` checking that a DB
-exception becomes `status: false` rather than a 500.
+Each controller file also checks that a DB exception becomes `status: false` rather than a 500.
 
 ### Controllers
 
@@ -94,6 +94,19 @@ AgentDNA and DB functions are mocked. Policy files and recovery journal entries 
 | `test_get_user_status` | Returns the user DID's status |
 | `test_list_users[some\|none]` | Returns the list; empty list says "no users found" |
 
+#### Tool endpoints
+
+Covers `POST /agent-admin/v1/tools/register` and `PATCH` / `GET /agent-admin/v1/tools/{tool_id}/status`.
+
+| Test | Checks |
+|---|---|
+| `test_register_tool_stores_tool` | `add_tool` gets `(tool_id, tool_name)`; success message names the tool |
+| `test_register_tool_conflict` | A duplicate tool ID returns `status: false` with the reason |
+| `test_register_tool_rejects_empty_field[tool_id\|tool_name]` | An empty ID or name is rejected with 422 |
+| `test_update_tool_status[True\|False]` | Sets the flag; message says whitelisted / blacklisted |
+| `test_update_tool_status_unknown_tool` | Unknown tool ID returns `status: false` |
+| `test_get_tool_status` | Returns the tool's whitelist status |
+
 #### Batch whitelist check
 
 Covers `POST /agent-admin/v1/whitelist/check`.
@@ -138,9 +151,18 @@ Covers `POST /agent-admin/v1/whitelist/check`.
 | `test_set_user_active_status` | Flips `is_active`; unknown DID → `False` |
 | `test_get_all_users` | Lists every user DID with its status |
 
+#### Tools
+
+| Test | Checks |
+|---|---|
+| `test_add_tool_stores_active_tool` | Stores the ID and name; new tools start active |
+| `test_add_tool_rejects_duplicate_id` | Raises `ToolConflictError` and leaves the existing tool unchanged |
+| `test_is_tool_whitelisted[active\|inactive\|unknown]` | `True` / `False` / `False` |
+| `test_set_tool_active_status` | Flips `is_active`; unknown tool ID → `False` |
+
 #### Whitelist
 
 | Test | Checks |
 |---|---|
 | `test_is_agent_whitelisted[active\|inactive\|unknown]` | `True` / `False` / `False` |
-| `test_get_whitelisted_actors_checks_agents_and_users` | Returns active DIDs from both `agents` and `user_id`; inactive and unknown DIDs are excluded |
+| `test_get_whitelisted_actors_checks_agents_users_and_tools` | Returns active DIDs from `agents`, `user_id` and `tools`; inactive and unknown DIDs are excluded |

@@ -25,7 +25,10 @@ from db import (
     _register_user,
     _set_user_active_status,
     _get_user_active_status,
-    _get_all_users
+    _get_all_users,
+    add_tool,
+    is_tool_whitelisted,
+    set_tool_active_status,
 )
 from recovery import journal, clear
 from security import hash_password, verify_password, create_access_token
@@ -315,7 +318,7 @@ async def agent_whitelist(agent_id: str) -> tuple[bool, str, bool]:
 
 async def actors_whitelist(dids: List[str]) -> tuple[bool, str, dict]:
     # Unknown DIDs count as blacklisted, same as the single-DID check.
-    unique_dids = list(dict.fromkeys(dids))
+    unique_dids = list(set(dids))
     try:
         whitelisted = get_whitelisted_actors(unique_dids)
     except Exception as exc:
@@ -367,3 +370,34 @@ async def get_users() -> tuple[bool, List[Any], str]:
         return True, users, "users fetched successfully"
     except Exception as exc:
         return False, [], f"error occured while fetching users: {exc}"
+
+
+async def register_tool(tool_id: str, tool_name: str) -> tuple[bool, str]:
+    try:
+        add_tool(tool_id, tool_name)
+    except Exception as exc:
+        return False, f"failed to register tool (id: {tool_id}): {exc}"
+
+    return True, f"tool '{tool_name}' registered successfully"
+
+
+async def tool_whitelist(tool_id: str) -> tuple[bool, str, bool]:
+    try:
+        is_whitelisted = is_tool_whitelisted(tool_id)
+    except Exception as exc:
+        return False, f"failed to get tool status: {exc}", False
+
+    return True, "tool status fetched successfully", is_whitelisted
+
+
+async def update_tool_status(tool_id: str, is_active: bool) -> tuple[bool, str]:
+    try:
+        updated = set_tool_active_status(tool_id, is_active)
+    except Exception as exc:
+        return False, f"failed to set tool status: {exc}"
+
+    if not updated:
+        return False, f"no tool found with ID '{tool_id}'"
+
+    result_str = "whitelisted" if is_active else "blacklisted"
+    return True, f"tool is {result_str} successfully"

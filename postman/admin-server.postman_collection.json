@@ -429,7 +429,7 @@
             "raw": { "language": "json" }
           }
         },
-        "description": "Checks a batch of actor DIDs (agents or users) in one call. Returns the DIDs split into `whitelist` and `blacklist`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted. An empty `dids` list is rejected with 422."
+        "description": "Checks a batch of actor DIDs (agents, users or tools) in one call. Returns the DIDs split into `whitelist` and `blacklist`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted. An empty `dids` list is rejected with 422."
       },
       "response": [
         {
@@ -455,6 +455,178 @@
           "_postman_previewlanguage": "json",
           "header": [{ "key": "Content-Type", "value": "application/json" }],
           "body": "{\n  \"status\": true,\n  \"message\": \"Whitelist status retrieved for 2 actors\",\n  \"data\": {\n    \"whitelist\": [\n      \"<agent-did>\"\n    ],\n    \"blacklist\": [\n      \"<user-did>\"\n    ]\n  }\n}"
+        }
+      ]
+    },
+    {
+      "name": "Register Tool",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/tools/register",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "tools", "register"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tool_id\": \"<tool-did>\",\n  \"tool_name\": \"search-tool\"\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Registers a tool by storing its ID (DID) and name in the `tools` table. New tools start whitelisted. An empty `tool_id` or `tool_name` is rejected with 422."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/tools/register",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "tools", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tool_id\": \"<tool-did>\",\n  \"tool_name\": \"search-tool\"\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"tool 'search-tool' registered successfully\",\n  \"data\": null\n}"
+        },
+        {
+          "name": "Conflict",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/tools/register",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "tools", "register"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tool_id\": \"<tool-did>\",\n  \"tool_name\": \"search-tool\"\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"failed to register tool (id: <tool-did>): tool with ID '<tool-did>' is already registered\",\n  \"data\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Update Tool Status",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/tools/<tool-did>/status",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "tools", "<tool-did>", "status"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_active\": false\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Whitelists (`is_active: true`) or blacklists (`is_active: false`) a tool. Unknown tool IDs return `status: false`."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/tools/<tool-did>/status",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "tools", "<tool-did>", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"tool is blacklisted successfully\",\n  \"data\": null\n}"
+        },
+        {
+          "name": "Not Found",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/tools/<tool-did>/status",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "tools", "<tool-did>", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"no tool found with ID '<tool-did>'\",\n  \"data\": null\n}"
+        }
+      ]
+    },
+    {
+      "name": "Get Tool Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/tools/<tool-did>/status",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "tools", "<tool-did>", "status"]
+        },
+        "description": "Returns whether a tool is whitelisted (`data` is true or false). Unknown tool IDs return false."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/tools/<tool-did>/status",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "tools", "<tool-did>", "status"]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"tool status fetched successfully\",\n  \"data\": true\n}"
         }
       ]
     }
