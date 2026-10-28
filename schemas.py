@@ -37,7 +37,7 @@ class WhitelistAgentRequest(BaseModel):
 
 
 class CheckWhitelistRequest(BaseModel):
-    dids: list[str] = Field(..., min_length=1, description="DIDs of the actors (agents or users) to check")
+    dids: list[str] = Field(..., min_length=1, description="DIDs of the actors (agents, users or tools) to check")
 
 
 class CreateAgentResponse(BaseModel):
@@ -51,6 +51,15 @@ class RegisterUserRequest(BaseModel):
     email: str = Field(..., description="User's email address")
     user_id: str = Field(..., min_length=1, description="User ID supplied by the client")
     api_key: str = Field(..., description="User API Key")
+
+
+class RegisterToolRequest(BaseModel):
+    tool_id: str = Field(..., min_length=1, description="DID of the tool")
+    tool_name: str = Field(..., min_length=1, description="Name of the tool")
+
+
+class UpdateToolStatusRequest(BaseModel):
+    is_active: bool = Field(..., description="True to whitelist the tool, false to blacklist it")
 
 
 class UpdateUserStatusRequest(BaseModel):

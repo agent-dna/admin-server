@@ -336,7 +336,7 @@ Sample failure (admin not registered):
 
 ### POST `/whitelist/check`
 
-Checks a batch of actor DIDs (agents or users) in one call. A DID is whitelisted if it is an active agent in `agents` or an active user DID in `user_id`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted.
+Checks a batch of actor DIDs (agents, users or tools) in one call. A DID is whitelisted if it is an active agent in `agents`, an active user DID in `user_id`, or an active tool in `tools`. Duplicates are dropped and unknown DIDs are blacklisted. The order of the returned DIDs is not guaranteed.
 
 Request type: `application/json`
 
@@ -354,6 +354,83 @@ Response: `AgentResponse` with `data` set to the DIDs split into `whitelist` and
     "whitelist": ["<agent-did>", "<user-did>"],
     "blacklist": ["<unknown-did>"]
   }
+}
+```
+
+### POST `/tools/register`
+
+Registers a tool by storing `(tool_id, tool_name)` in the `tools` table. New tools start whitelisted (`is_active` true).
+
+The call is idempotent: registering the same `(tool_id, tool_name)` again succeeds and changes nothing (a blacklisted tool stays blacklisted). Registering a known `tool_id` with a different name fails.
+
+Request type: `application/json`
+
+Request body:
+
+- `tool_id` (string): DID of the tool. Must not be empty.
+- `tool_name` (string): name of the tool. Must not be empty.
+
+Response: `BaseResponse` (same shape as `AgentResponse`), `data` is `null`.
+
+```json
+{
+  "status": true,
+  "message": "tool 'search-tool' registered successfully",
+  "data": null
+}
+```
+
+If the tool ID is already registered with a different name:
+
+```json
+{
+  "status": false,
+  "message": "failed to register tool (id: <tool-did>): tool with ID '<tool-did>' is already registered as 'web-search'",
+  "data": null
+}
+```
+
+### PATCH `/tools/{tool_id}/status`
+
+Whitelists or blacklists a tool by setting its `is_active` flag.
+
+Request type: `application/json`
+
+Request body:
+
+- `is_active` (bool): `true` to whitelist the tool, `false` to blacklist it.
+
+Response: `BaseResponse`, `data` is `null`.
+
+```json
+{
+  "status": true,
+  "message": "tool is blacklisted successfully",
+  "data": null
+}
+```
+
+If the tool ID is unknown:
+
+```json
+{
+  "status": false,
+  "message": "no tool found with ID '<tool-did>'",
+  "data": null
+}
+```
+
+### GET `/tools/{tool_id}/status`
+
+Returns whether a tool is whitelisted. Unknown tool IDs return `false`.
+
+Response: `BaseResponse` with `data` set to the whitelist status.
+
+```json
+{
+  "status": true,
+  "message": "tool status fetched successfully",
+  "data": true
 }
 ```
 

@@ -18,6 +18,8 @@ from schemas import (
     CheckWhitelistRequest,
     RegisterUserRequest,
     UpdateUserStatusRequest,
+    RegisterToolRequest,
+    UpdateToolStatusRequest,
     BaseResponse
 )
 from services import (
@@ -35,7 +37,10 @@ from services import (
     register_user,
     update_user_status,
     get_user_status,
-    get_users   
+    get_users,
+    register_tool,
+    tool_whitelist,
+    update_tool_status,
 )
 
 
@@ -171,6 +176,24 @@ async def get_user_status_endpoint(user_id: str):
 async def get_users_endpoint():
     status, users, message = await get_users()
     return BaseResponse(status=status, message=message, data=users)
+
+
+@app.post("/agent-admin/v1/tools/register", response_model=BaseResponse)
+async def register_tool_endpoint(payload: RegisterToolRequest) -> BaseResponse:
+    status, message = await register_tool(payload.tool_id, payload.tool_name)
+    return BaseResponse(status=status, message=message, data=None)
+
+
+@app.patch("/agent-admin/v1/tools/{tool_id}/status", response_model=BaseResponse)
+async def update_tool_status_endpoint(tool_id: str, payload: UpdateToolStatusRequest) -> BaseResponse:
+    status, message = await update_tool_status(tool_id, payload.is_active)
+    return BaseResponse(status=status, message=message, data=None)
+
+
+@app.get("/agent-admin/v1/tools/{tool_id}/status", response_model=BaseResponse)
+async def get_tool_status_endpoint(tool_id: str) -> BaseResponse:
+    status, message, is_whitelisted = await tool_whitelist(tool_id)
+    return BaseResponse(status=status, message=message, data=is_whitelisted)
 
 
 if __name__ == "__main__":

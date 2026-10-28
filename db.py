@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS user_id (
     email TEXT NOT NULL REFERENCES users(email),
     is_active BOOL NOT NULL DEFAULT TRUE
 );
+
+CREATE TABLE IF NOT EXISTS tools (
+    tool_id   TEXT PRIMARY KEY,
+    tool_name TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+);
 """
 
 
@@ -47,6 +53,10 @@ class AgentConflictError(Exception):
 
 
 class AdminConflictError(Exception):
+    pass
+
+
+class ToolConflictError(Exception):
     pass
 
 def migrate_db() -> None:
@@ -185,7 +195,7 @@ def is_agent_whitelisted(did: str) -> bool:
 def get_whitelisted_actors(dids: List[str]) -> set[str]:
     """Return the subset of dids that are whitelisted (is_active), in one query.
 
-    Actors are agents and users, so both the agents and user_id tables are checked.
+    Actors are agents, users and tools, so the agents, user_id and tools tables are checked.
     """
     with pool.connection() as conn:
         rows = conn.execute(
@@ -193,6 +203,8 @@ def get_whitelisted_actors(dids: List[str]) -> set[str]:
             SELECT did FROM agents WHERE did = ANY(%(dids)s) AND is_active
             UNION
             SELECT id FROM user_id WHERE id = ANY(%(dids)s) AND is_active
+            UNION
+            SELECT tool_id FROM tools WHERE tool_id = ANY(%(dids)s) AND is_active
             """,
             {"dids": dids},
         ).fetchall()
@@ -336,3 +348,50 @@ def _get_all_users() -> List[Any]:
         user_ids = [{"user_id": row[0], "is_active": row[1]} for row in rows.fetchall()]
 
     return user_ids
+
+
+def add_tool(tool_id: str, tool_name: str) -> None:
+    """Register a tool.
+
+    Idempotent: registering the same (tool_id, tool_name) again does nothing.
+    Raises ToolConflictError if the tool ID is registered with a different name.
+    """
+    with pool.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO tools (tool_id, tool_name)
+            VALUES (%s, %s)
+            ON CONFLICT (tool_id) DO NOTHING
+            """,
+            (tool_id, tool_name),
+        )
+        row = conn.execute(
+            "SELECT tool_name FROM tools WHERE tool_id = %s",
+            (tool_id,),
+        ).fetchone()
+
+    if row[0] != tool_name:
+        raise ToolConflictError(f"tool with ID '{tool_id}' is already registered as '{row[0]}'")
+
+
+def is_tool_whitelisted(tool_id: str) -> bool:
+    """Return True if the tool is whitelisted (is_active), False otherwise."""
+    with pool.connection() as conn:
+        row = conn.execute(
+            "SELECT is_active FROM tools WHERE tool_id = %s",
+            (tool_id,),
+        ).fetchone()
+    return row[0] if row else False
+
+
+def set_tool_active_status(tool_id: str, is_active: bool) -> bool:
+    """Set a tool's is_active flag.
+
+    Returns True if a row was updated, False if no matching tool exists.
+    """
+    with pool.connection() as conn:
+        cur = conn.execute(
+            "UPDATE tools SET is_active = %s WHERE tool_id = %s",
+            (is_active, tool_id),
+        )
+    return cur.rowcount > 0

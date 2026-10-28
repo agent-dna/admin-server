@@ -70,6 +70,10 @@ class SeedData:
     user_api_key: str = "user-api-key"
     active_user: str = "bafybeiasb5vpmaounyilfuxbd3lryvosl4yefqrfahsb2esg46q6tu6y5q"
     inactive_user: str = "bafybeiemxf5abjwjbikoz4mc3a3dla6ual3jsgpdr4cjr3oz3evfyavhwq"
+    active_tool: str = "bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo3rs7ewhnp7lly"
+    active_tool_name: str = "search-tool"
+    inactive_tool: str = "bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy"
+    inactive_tool_name: str = "fetch-tool"
     # Not inserted anywhere.
     unknown: str = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
 
@@ -114,5 +118,13 @@ def seed(test_pool) -> SeedData:
                    (%s, %s, FALSE)
             """,
             (data.active_user, data.user_email, data.inactive_user, data.user_email),
+        )
+        conn.execute(
+            """
+            INSERT INTO tools (tool_id, tool_name, is_active)
+            VALUES (%s, %s, TRUE),
+                   (%s, %s, FALSE)
+            """,
+            (data.active_tool, data.active_tool_name, data.inactive_tool, data.inactive_tool_name),
         )
     return data
