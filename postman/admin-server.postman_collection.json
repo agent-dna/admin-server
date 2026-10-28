@@ -429,7 +429,7 @@
             "raw": { "language": "json" }
           }
         },
-        "description": "Checks a batch of actor DIDs (agents, users or tools) in one call. Returns the DIDs split into `whitelist` and `blacklist`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted. An empty `dids` list is rejected with 422."
+        "description": "Checks a batch of actor DIDs (agents, users or tools) in one call. Returns the DIDs split into `whitelist` and `blacklist`. Duplicates are dropped and unknown DIDs are blacklisted. The order of the returned DIDs is not guaranteed. An empty `dids` list is rejected with 422."
       },
       "response": [
         {

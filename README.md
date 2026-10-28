@@ -336,7 +336,7 @@ Sample failure (admin not registered):
 
 ### POST `/whitelist/check`
 
-Checks a batch of actor DIDs (agents, users or tools) in one call. A DID is whitelisted if it is an active agent in `agents`, an active user DID in `user_id`, or an active tool in `tools`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted.
+Checks a batch of actor DIDs (agents, users or tools) in one call. A DID is whitelisted if it is an active agent in `agents`, an active user DID in `user_id`, or an active tool in `tools`. Duplicates are dropped and unknown DIDs are blacklisted. The order of the returned DIDs is not guaranteed.
 
 Request type: `application/json`
 

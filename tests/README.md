@@ -113,7 +113,7 @@ Covers `POST /agent-admin/v1/whitelist/check`.
 
 | Test | Checks |
 |---|---|
-| `test_splits_dids_into_whitelist_and_blacklist` | DIDs are split into `whitelist` / `blacklist`; duplicates dropped, input order kept, unknown DIDs blacklisted |
+| `test_splits_dids_into_whitelist_and_blacklist` | DIDs are split into `whitelist` / `blacklist`; duplicates dropped, unknown DIDs blacklisted (order not checked) |
 | `test_db_error_returns_failed_status` | A DB failure returns `status: false` with empty lists |
 | `test_rejects_empty_did_list` | An empty `dids` list is rejected with 422 |
 
