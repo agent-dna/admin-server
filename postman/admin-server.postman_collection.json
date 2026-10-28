@@ -411,6 +411,52 @@
           "body": "{\n  \"status\": false,\n  \"message\": \"No agent found with did '<agent-did>'\",\n  \"data\": null\n}"
         }
       ]
+    },
+    {
+      "name": "Check Actors Whitelist",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/whitelist/check",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "whitelist", "check"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dids\": [\n    \"{{did}}\"\n  ]\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Checks a batch of actor DIDs (agents or users) in one call. Returns the DIDs split into `whitelist` and `blacklist`. Duplicates are dropped and input order is kept; unknown DIDs are blacklisted. An empty `dids` list is rejected with 422."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/whitelist/check",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "whitelist", "check"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dids\": [\n    \"{{did}}\"\n  ]\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"Whitelist status retrieved for 2 actors\",\n  \"data\": {\n    \"whitelist\": [\n      \"<agent-did>\"\n    ],\n    \"blacklist\": [\n      \"<user-did>\"\n    ]\n  }\n}"
+        }
+      ]
     }
   ]
 }

@@ -21,6 +21,7 @@ from db import (
     set_agent_active_status,
     update_admin_password,
     is_agent_whitelisted,
+    get_whitelisted_actors,
     _register_user,
     _set_user_active_status,
     _get_user_active_status,
@@ -310,6 +311,21 @@ async def agent_whitelist(agent_id: str) -> tuple[bool, str, bool]:
     except Exception as exc:
         return False, f"Failed to fetch agent {agent_id} : {exc}", False
     return True, f"Agent {agent_id} whitelist status retrieved", is_whitelisted
+
+
+async def actors_whitelist(dids: List[str]) -> tuple[bool, str, dict]:
+    # Unknown DIDs count as blacklisted, same as the single-DID check.
+    unique_dids = list(dict.fromkeys(dids))
+    try:
+        whitelisted = get_whitelisted_actors(unique_dids)
+    except Exception as exc:
+        return False, f"Failed to fetch whitelist status: {exc}", {"whitelist": [], "blacklist": []}
+
+    result = {
+        "whitelist": [did for did in unique_dids if did in whitelisted],
+        "blacklist": [did for did in unique_dids if did not in whitelisted],
+    }
+    return True, f"Whitelist status retrieved for {len(unique_dids)} actors", result
 
 
 async def register_user(user_id: str, email_id: str, api_key: str) -> tuple[bool, str]:
