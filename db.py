@@ -334,6 +334,5 @@ def _get_all_users() -> List[Any]:
             """
         )
         user_ids = [{"user_id": row[0], "is_active": row[1]} for row in rows.fetchall()]
-        print(user_ids)
 
     return user_ids
