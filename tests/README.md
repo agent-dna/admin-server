@@ -37,8 +37,9 @@ Test file names must be unique across folders.
 |---|---|
 | `admin_did`, `admin_username`, `admin_org`, `admin_email`, `admin_password_hash` | One admin in `admin` |
 | `active_agent` / `inactive_agent` (+ `_name`) | Agents in `agents`, `is_active` true / false; both in `admin_org`, deployed by `admin_did`, with `agent_policy` |
-| `user_email`, `user_api_key` | One user in `users` |
+| `user_email`, `user_api_key` | One whitelisted user in `users` |
 | `active_user` / `inactive_user` | That user's DIDs in `user_id`, `is_active` true / false |
+| `blocked_user_email`, `blocked_user_api_key`, `blocked_user` | A blacklisted user (`users.is_active` false) and their one DID, also inactive |
 | `active_tool` / `inactive_tool` (+ `_name`) | Tools in `tools`, `is_active` true / false |
 | `unknown` | A DID that isn't in any table |
 
@@ -91,6 +92,8 @@ AgentDNA and DB functions are mocked. Policy files and recovery journal entries 
 | `test_register_user_passes_fields_in_order` | `_register_user` gets `(email, api_key, user_id)` in that order |
 | `test_register_user_conflict` | A registration conflict returns `status: false` with the reason |
 | `test_update_user_status[True\|False]` | Sets the flag; message says whitelisted / blacklisted |
+| `test_update_user_status_by_email[True\|False]` | Sets the user's status by email; message says whitelisted / blacklisted |
+| `test_update_user_status_by_email_unknown_email` | Unknown email returns `status: false` |
 | `test_get_user_status` | Returns the user DID's status |
 | `test_list_users[some\|none]` | Returns the list; empty list says "no users found" |
 
@@ -146,9 +149,11 @@ Covers `POST /agent-admin/v1/whitelist/check`.
 |---|---|
 | `test_register_user_creates_user_and_id` | First registration creates the user and an active user DID |
 | `test_register_user_adds_id_to_existing_user` | Same email + API key adds another DID |
+| `test_register_user_for_blacklisted_user_adds_inactive_id` | A new DID for a blacklisted user is stored inactive |
 | `test_register_user_rejects_conflicts_without_writing[...]` | Different API key, API key of another email, or duplicate DID raises `ValueError` and writes nothing |
 | `test_get_user_active_status[active\|inactive\|unknown]` | `True` / `False` / `False` |
 | `test_set_user_active_status` | Flips `is_active`; unknown DID → `False` |
+| `test_set_user_active_status_by_email` | Sets `is_active` on the user and all their DIDs, leaving other users alone; unknown email → `False` |
 | `test_get_all_users` | Lists every user DID with its status |
 
 #### Tools

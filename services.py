@@ -24,6 +24,7 @@ from db import (
     get_whitelisted_actors,
     _register_user,
     _set_user_active_status,
+    _set_user_active_status_by_email,
     _get_user_active_status,
     _get_all_users,
     add_tool,
@@ -349,6 +350,20 @@ async def update_user_status(user_id: str, is_active: bool) -> tuple[bool, str, 
     result_str = "blacklisted" if not is_active else "whitelisted" 
 
     return True, f"user is {result_str} successfully", user_status
+
+
+async def update_user_status_by_email(email: str, is_active: bool) -> tuple[bool, str, bool]:
+    try:
+        updated = _set_user_active_status_by_email(email, is_active)
+    except Exception as exc:
+        return False, f"failed to set user status: {exc}", False
+
+    if not updated:
+        return False, f"no user found with email '{email}'", False
+
+    result_str = "blacklisted" if not is_active else "whitelisted"
+
+    return True, f"user is {result_str} successfully", True
 
 
 async def get_user_status(user_id: str) -> tuple[bool, str, bool]:

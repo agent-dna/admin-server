@@ -70,6 +70,10 @@ class SeedData:
     user_api_key: str = "user-api-key"
     active_user: str = "bafybeiasb5vpmaounyilfuxbd3lryvosl4yefqrfahsb2esg46q6tu6y5q"
     inactive_user: str = "bafybeiemxf5abjwjbikoz4mc3a3dla6ual3jsgpdr4cjr3oz3evfyavhwq"
+    # A user blacklisted by email: the user and their only DID are inactive.
+    blocked_user_email: str = "blocked@example.com"
+    blocked_user_api_key: str = "blocked-api-key"
+    blocked_user: str = "bafybeibml5uieyxa5tufngvg7fgwbkwvlsuntwbxgtskoqynbt7wlchmfm"
     active_tool: str = "bafybeihkoviema7g3gxyt6la7vd5ho32ictqbilu3wnlo3rs7ewhnp7lly"
     active_tool_name: str = "search-tool"
     inactive_tool: str = "bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy"
@@ -108,16 +112,25 @@ def seed(test_pool) -> SeedData:
             },
         )
         conn.execute(
-            "INSERT INTO users (email, api_key) VALUES (%s, %s)",
-            (data.user_email, data.user_api_key),
+            """
+            INSERT INTO users (email, api_key, is_active)
+            VALUES (%s, %s, TRUE),
+                   (%s, %s, FALSE)
+            """,
+            (data.user_email, data.user_api_key, data.blocked_user_email, data.blocked_user_api_key),
         )
         conn.execute(
             """
             INSERT INTO user_id (id, email, is_active)
             VALUES (%s, %s, TRUE),
+                   (%s, %s, FALSE),
                    (%s, %s, FALSE)
             """,
-            (data.active_user, data.user_email, data.inactive_user, data.user_email),
+            (
+                data.active_user, data.user_email,
+                data.inactive_user, data.user_email,
+                data.blocked_user, data.blocked_user_email,
+            ),
         )
         conn.execute(
             """

@@ -2,6 +2,7 @@
 
 POST  /agent-admin/v1/users
 PATCH /agent-admin/v1/users/{user_id}/status
+PATCH /agent-admin/v1/users/{email_id}/status_by_email
 GET   /agent-admin/v1/users/{user_id}/status
 GET   /agent-admin/v1/users
 """
@@ -50,6 +51,26 @@ def test_update_user_status(client, monkeypatch, is_active, word):
     set_status.assert_called_once_with(USER_ID, is_active)
 
 
+@pytest.mark.parametrize("is_active, word", [(True, "whitelisted"), (False, "blacklisted")])
+def test_update_user_status_by_email(client, monkeypatch, is_active, word):
+    set_status = MagicMock(return_value=True)
+    monkeypatch.setattr(services, "_set_user_active_status_by_email", set_status)
+
+    body = client.patch(f"/agent-admin/v1/users/{EMAIL}/status_by_email", json={"is_active": is_active}).json()
+
+    assert body == {"status": True, "message": f"user is {word} successfully", "data": True}
+    set_status.assert_called_once_with(EMAIL, is_active)
+
+
+def test_update_user_status_by_email_unknown_email(client, monkeypatch):
+    monkeypatch.setattr(services, "_set_user_active_status_by_email", MagicMock(return_value=False))
+
+    body = client.patch(f"/agent-admin/v1/users/{EMAIL}/status_by_email", json={"is_active": False}).json()
+
+    assert body["status"] is False
+    assert "no user found" in body["message"]
+
+
 def test_get_user_status(client, monkeypatch):
     lookup = MagicMock(return_value=True)
     monkeypatch.setattr(services, "_get_user_active_status", lookup)
@@ -79,6 +100,7 @@ def test_list_users(client, monkeypatch, users, message):
     "method, url, payload, db_function",
     [
         pytest.param("PATCH", f"/agent-admin/v1/users/{USER_ID}/status", {"is_active": True}, "_set_user_active_status", id="update-status"),
+        pytest.param("PATCH", f"/agent-admin/v1/users/{EMAIL}/status_by_email", {"is_active": True}, "_set_user_active_status_by_email", id="update-status-by-email"),
         pytest.param("GET", f"/agent-admin/v1/users/{USER_ID}/status", None, "_get_user_active_status", id="get-status"),
         pytest.param("GET", "/agent-admin/v1/users", None, "_get_all_users", id="list-users"),
     ],

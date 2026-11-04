@@ -357,6 +357,40 @@ Response: `AgentResponse` with `data` set to the DIDs split into `whitelist` and
 }
 ```
 
+### PATCH `/users/{email_id}/status_by_email`
+
+Whitelists or blacklists a user by email. Sets `is_active` on the user's row in `users` and on every one of their DIDs in `user_id`, in one transaction.
+
+DIDs the user registers later (`POST /users`) take the user's current status, so a blacklisted user's new DIDs start blacklisted.
+
+Whitelisting a user this way also re-enables any of their DIDs that were blacklisted individually via `PATCH /users/{user_id}/status`.
+
+Request type: `application/json`
+
+Request body:
+
+- `is_active` (bool): `true` to whitelist the user, `false` to blacklist them.
+
+Response: `BaseResponse`, `data` is `true` when the status was updated.
+
+```json
+{
+  "status": true,
+  "message": "user is blacklisted successfully",
+  "data": true
+}
+```
+
+If the email is unknown:
+
+```json
+{
+  "status": false,
+  "message": "no user found with email 'user@example.com'",
+  "data": false
+}
+```
+
 ### POST `/tools/register`
 
 Registers a tool by storing `(tool_id, tool_name)` in the `tools` table. New tools start whitelisted (`is_active` true).
