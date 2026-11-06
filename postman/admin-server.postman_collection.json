@@ -459,6 +459,76 @@
       ]
     },
     {
+      "name": "Update User Status By Email",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": {
+          "raw": "{{base_url}}/agent-admin/v1/users/user@example.com/status_by_email",
+          "host": ["{{base_url}}"],
+          "path": ["agent-admin", "v1", "users", "user@example.com", "status_by_email"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_active\": false\n}",
+          "options": {
+            "raw": { "language": "json" }
+          }
+        },
+        "description": "Whitelists (`is_active: true`) or blacklists (`is_active: false`) a user by email. Sets `is_active` on the user and on all of their DIDs in one transaction. DIDs registered later take the user's current status. Unknown emails return `status: false`."
+      },
+      "response": [
+        {
+          "name": "Success",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/users/user@example.com/status_by_email",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "users", "user@example.com", "status_by_email"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": true,\n  \"message\": \"user is blacklisted successfully\",\n  \"data\": true\n}"
+        },
+        {
+          "name": "Not Found",
+          "originalRequest": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/agent-admin/v1/users/user@example.com/status_by_email",
+              "host": ["{{base_url}}"],
+              "path": ["agent-admin", "v1", "users", "user@example.com", "status_by_email"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": { "language": "json" }
+              }
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "json",
+          "header": [{ "key": "Content-Type", "value": "application/json" }],
+          "body": "{\n  \"status\": false,\n  \"message\": \"no user found with email 'user@example.com'\",\n  \"data\": false\n}"
+        }
+      ]
+    },
+    {
       "name": "Register Tool",
       "request": {
         "method": "POST",

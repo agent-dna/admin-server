@@ -67,3 +67,10 @@ class UpdateUserStatusRequest(BaseModel):
         ...,
         description="True to activate the user ID, false to deactivate it",
     )
+
+
+class UpdateUserStatusByEmailRequest(BaseModel):
+    is_active: bool = Field(
+        ...,
+        description="True to whitelist the user and all their user IDs, false to blacklist them",
+    )

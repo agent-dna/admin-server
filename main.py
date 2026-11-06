@@ -18,6 +18,7 @@ from schemas import (
     CheckWhitelistRequest,
     RegisterUserRequest,
     UpdateUserStatusRequest,
+    UpdateUserStatusByEmailRequest,
     RegisterToolRequest,
     UpdateToolStatusRequest,
     BaseResponse
@@ -36,6 +37,7 @@ from services import (
     whitelist_agent,
     register_user,
     update_user_status,
+    update_user_status_by_email,
     get_user_status,
     get_users,
     register_tool,
@@ -163,6 +165,12 @@ async def register_user_endpoint(payload: RegisterUserRequest) -> BaseResponse:
 @app.patch("/agent-admin/v1/users/{user_id}/status", response_model=BaseResponse)
 async def update_user_status_endpoint(user_id: str, payload: UpdateUserStatusRequest) -> BaseResponse:
     status, message, user_status = await update_user_status(user_id, payload.is_active)
+    return BaseResponse(status=status, message=message, data=user_status)
+
+
+@app.patch("/agent-admin/v1/users/{email_id}/status_by_email", response_model=BaseResponse)
+async def update_user_status_by_email_endpoint(email_id: str, payload: UpdateUserStatusByEmailRequest) -> BaseResponse:
+    status, message, user_status = await update_user_status_by_email(email_id, payload.is_active)
     return BaseResponse(status=status, message=message, data=user_status)
 
 

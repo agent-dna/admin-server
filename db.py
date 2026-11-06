@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS admin (
 
 CREATE TABLE IF NOT EXISTS users (
     email TEXT PRIMARY KEY,
-    api_key TEXT NOT NULL UNIQUE
+    api_key TEXT NOT NULL UNIQUE,
+    is_active BOOL NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE IF NOT EXISTS user_id (
@@ -68,6 +69,10 @@ def migrate_db() -> None:
         conn.execute("""
             ALTER TABLE agents
             ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+        """)
+        conn.execute("""
+            ALTER TABLE users
+            ADD COLUMN IF NOT EXISTS is_active BOOL NOT NULL DEFAULT TRUE;
         """)
 
 def init_db() -> None:
@@ -263,7 +268,9 @@ def _register_user(email: str, api_key: str, user_id: str):
     """Register a user ID, creating the user on its first registration.
 
     A user (email, api_key) can own several user IDs, so repeat calls with the
-    same email and api_key add another user ID to the existing user.
+    same email and api_key add another user ID to the existing user. A new
+    user ID takes the user's is_active, so a blacklisted user's new IDs start
+    blacklisted.
 
     Raises ValueError if the email is registered with a different api_key,
     the api_key belongs to another email, or the user ID is already registered.
@@ -283,7 +290,7 @@ def _register_user(email: str, api_key: str, user_id: str):
                 )
 
                 row = conn.execute(
-                    "SELECT api_key FROM users WHERE email = %s",
+                    "SELECT api_key, is_active FROM users WHERE email = %s",
                     (email,),
                 ).fetchone()
                 if row[0] != api_key:
@@ -293,10 +300,10 @@ def _register_user(email: str, api_key: str, user_id: str):
 
                 conn.execute(
                     """
-                    INSERT INTO user_id (id, email)
-                    VALUES (%s, %s)
+                    INSERT INTO user_id (id, email, is_active)
+                    VALUES (%s, %s, %s)
                     """,
-                    (user_id, email),
+                    (user_id, email, row[1]),
                 )
 
     except UniqueViolation as exc:
@@ -319,6 +326,33 @@ def _set_user_active_status(user_id: str, is_active: bool) -> bool:
             """,
             (is_active, user_id),
         )
+
+    return cur.rowcount > 0
+
+
+def _set_user_active_status_by_email(email: str, is_active: bool) -> bool:
+    """Update a user's active status and that of all their user IDs.
+
+    Returns False if the email does not exist. Both tables are updated atomically.
+    """
+    with pool.connection() as conn:
+        with conn.transaction():
+            cur = conn.execute(
+                """
+                UPDATE users
+                SET is_active = %s
+                WHERE email = %s
+                """,
+                (is_active, email),
+            )
+            conn.execute(
+                """
+                UPDATE user_id
+                SET is_active = %s
+                WHERE email = %s
+                """,
+                (is_active, email),
+            )
 
     return cur.rowcount > 0
 
